@@ -8,6 +8,10 @@ const KM = {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
+    if (tutorialPendingDiff) {
+      closeTutorialToMenu();
+      return;
+    }
     if (gActive) {
       gActive = false;
       if (gRAF) cancelAnimationFrame(gRAF);

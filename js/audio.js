@@ -164,6 +164,17 @@ function cleanup() {
 }
 
 async function startLive(diff) {
+  if (shouldShowTutorial()) {
+    // Show tutorial first; it will call startLiveAfterTutorial when dismissed
+    document.getElementById('menu').style.display = 'none';
+    document.getElementById('game').style.display = 'block';
+    showTutorial(diff);
+    return;
+  }
+  await startLiveAfterTutorial(diff);
+}
+
+async function startLiveAfterTutorial(diff) {
   curDiff = diff;
 
   try {

@@ -1,4 +1,34 @@
 // ═══════════════════════════════════════════
+//  TUTORIAL
+// ═══════════════════════════════════════════
+let tutorialPendingDiff = null;
+
+function shouldShowTutorial() {
+  return !localStorage.getItem('arrowstorm_tutorial_seen');
+}
+
+function showTutorial(diff) {
+  tutorialPendingDiff = diff;
+  document.getElementById('tutorial').classList.add('show');
+}
+
+function closeTutorialToMenu() {
+  tutorialPendingDiff = null;
+  document.getElementById('tutorial').classList.remove('show');
+  showMenu();
+}
+
+function closeTutorial() {
+  localStorage.setItem('arrowstorm_tutorial_seen', '1');
+  document.getElementById('tutorial').classList.remove('show');
+  if (tutorialPendingDiff) {
+    const diff = tutorialPendingDiff;
+    tutorialPendingDiff = null;
+    startLiveAfterTutorial(diff);
+  }
+}
+
+// ═══════════════════════════════════════════
 //  MENU & RESULTS SCREENS
 // ═══════════════════════════════════════════
 function showMenu() {
