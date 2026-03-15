@@ -5,15 +5,23 @@
 const BG_THEMES = {
   default: {
     label: 'Default (Blue)',
-    base:  [10, 10, 18],   // bg base RGB
-    mid:   [13, 13, 24],   // mid gradient RGB
-    bassShift: [0, 0, 30], // additive on bass
+    // CSS theme colors
+    bg:      '#0a0a12',       // body/game background
+    glow:    '#1a1a2e',       // radial gradient center (menu/results)
+    overlay: '10,10,18',      // overlay RGB for dialogs
+    // In-game canvas beat-reactive colors
+    base:  [10, 10, 18],
+    mid:   [13, 13, 24],
+    bassShift: [0, 0, 30],
     midShift:  [0, 0, 20],
     highShift: [0, 0, 20],
     pulseShift:[15, 0, 0],
   },
   red: {
     label: 'Crimson',
+    bg:      '#120a0a',
+    glow:    '#2e1a1a',
+    overlay: '18,10,10',
     base:  [18, 10, 10],
     mid:   [24, 13, 15],
     bassShift: [30, 0, 0],
@@ -23,6 +31,9 @@ const BG_THEMES = {
   },
   green: {
     label: 'Emerald',
+    bg:      '#0a120c',
+    glow:    '#1a2e1e',
+    overlay: '10,18,12',
     base:  [10, 18, 12],
     mid:   [13, 24, 15],
     bassShift: [0, 30, 5],
@@ -61,9 +72,18 @@ function saveSettings() {
 }
 
 function applySettings() {
+  applyThemeCSS();
   rebuildKeyMap();
   updateSettingsUI();
   updateMenuKeybindDisplay();
+}
+
+function applyThemeCSS() {
+  const theme = getBgTheme();
+  const root = document.documentElement.style;
+  root.setProperty('--bg', theme.bg);
+  root.setProperty('--bg-glow', theme.glow);
+  root.setProperty('--bg-overlay', theme.overlay);
 }
 
 function rebuildKeyMap() {
