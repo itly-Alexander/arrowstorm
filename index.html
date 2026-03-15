@@ -26,6 +26,62 @@
     The source tab is muted automatically. Music plays through the game with arrows synced to the beat.<br><br>
     <kbd>←</kbd><kbd>↓</kbd><kbd>↑</kbd><kbd>→</kbd> or <kbd>D</kbd><kbd>F</kbd><kbd>J</kbd><kbd>K</kbd> &nbsp;|&nbsp; <kbd>Esc</kbd> quit
   </div>
+  <button class="btn settings-btn" onclick="openSettings()">Settings</button>
+  <div class="version" id="ver"></div>
+
+  <div id="settings-panel">
+    <div class="stg-card">
+      <h2>SETTINGS</h2>
+
+      <div class="stg-section">
+        <h3>Background Theme</h3>
+        <div class="bg-opts">
+          <button class="bg-opt" data-theme="default" onclick="selectBgTheme('default')">
+            <div class="bg-preview bg-prev-default"></div>
+            <span>Default</span>
+          </button>
+          <button class="bg-opt" data-theme="red" onclick="selectBgTheme('red')">
+            <div class="bg-preview bg-prev-red"></div>
+            <span>Crimson</span>
+          </button>
+          <button class="bg-opt" data-theme="green" onclick="selectBgTheme('green')">
+            <div class="bg-preview bg-prev-green"></div>
+            <span>Emerald</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="stg-section">
+        <h3>Keybindings</h3>
+        <div class="kb-grid">
+          <div class="kb-row">
+            <span class="kb-dir al">← LEFT</span>
+            <button class="kb-key" id="kb-left-0" onclick="startRebind('left',0)"></button>
+            <button class="kb-key" id="kb-left-1" onclick="startRebind('left',1)"></button>
+          </div>
+          <div class="kb-row">
+            <span class="kb-dir ad">↓ DOWN</span>
+            <button class="kb-key" id="kb-down-0" onclick="startRebind('down',0)"></button>
+            <button class="kb-key" id="kb-down-1" onclick="startRebind('down',1)"></button>
+          </div>
+          <div class="kb-row">
+            <span class="kb-dir au">↑ UP</span>
+            <button class="kb-key" id="kb-up-0" onclick="startRebind('up',0)"></button>
+            <button class="kb-key" id="kb-up-1" onclick="startRebind('up',1)"></button>
+          </div>
+          <div class="kb-row">
+            <span class="kb-dir ar">→ RIGHT</span>
+            <button class="kb-key" id="kb-right-0" onclick="startRebind('right',0)"></button>
+            <button class="kb-key" id="kb-right-1" onclick="startRebind('right',1)"></button>
+          </div>
+        </div>
+        <div class="kb-hint">Click a key to rebind. Press Esc to cancel.</div>
+        <button class="btn stg-reset" onclick="resetKeybinds()">Reset to Default</button>
+      </div>
+
+      <button class="btn stg-close" onclick="closeSettings()">CLOSE</button>
+    </div>
+  </div>
 </div>
 
 <div id="game">
@@ -106,6 +162,7 @@
   </div>
 </div>
 
+<script src="js/version.js"></script>
 <script src="js/config.js"></script>
 <script src="js/state.js"></script>
 <script src="js/audio.js"></script>
@@ -113,6 +170,7 @@
 <script src="js/particles.js"></script>
 <script src="js/game.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/settings.js"></script>
 <script src="js/input.js"></script>
 <script src="js/main.js"></script>
 </body>

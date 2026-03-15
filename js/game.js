@@ -32,12 +32,11 @@ function gameLoop() {
   ctx.clearRect(0, 0, W, H);
 
   // ── BEAT-REACTIVE BACKGROUND ──
-  // Base gradient — subtly shifts hue with energy
+  const theme = getBgTheme();
   const bg = ctx.createLinearGradient(0,0,0,H);
-  const baseBright = 0.03 + beatEnergy * 0.03;
-  bg.addColorStop(0, `rgba(10,10,${Math.floor(18 + beatBass * 30)},1)`);
-  bg.addColorStop(.5, `rgba(${Math.floor(13 + beatPulse * 15)},13,${Math.floor(24 + beatHigh * 20)},1)`);
-  bg.addColorStop(1, `rgba(10,10,${Math.floor(18 + beatBass * 20)},1)`);
+  bg.addColorStop(0, `rgba(${theme.base[0]},${theme.base[1]},${Math.floor(theme.base[2] + beatBass * theme.bassShift[2])},1)`);
+  bg.addColorStop(.5, `rgba(${Math.floor(theme.mid[0] + beatPulse * theme.pulseShift[0])},${Math.floor(theme.mid[1] + beatPulse * theme.pulseShift[1])},${Math.floor(theme.mid[2] + beatHigh * theme.highShift[2])},1)`);
+  bg.addColorStop(1, `rgba(${theme.base[0]},${theme.base[1]},${Math.floor(theme.base[2] + beatBass * theme.midShift[2])},1)`);
   ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
 
   // Scan lines
