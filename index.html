@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArrowStorm</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="menu">
+  <h1>ARROWSTORM</h1>
+  <p class="sub">Rhythm Unleashed</p>
+  <div class="sec">
+    <h2>Pick Difficulty & Share a Tab Playing Music</h2>
+    <div class="row">
+      <button class="btn de" onclick="startLive('easy')">Easy</button>
+      <button class="btn dn" onclick="startLive('normal')">Normal</button>
+      <button class="btn dh" onclick="startLive('hard')">Hard</button>
+      <button class="btn dx" onclick="startLive('extreme')">Extreme</button>
+      <button class="btn di" onclick="startLive('impossible')">Impossible</button>
+    </div>
+  </div>
+  <div class="info">
+    Pick difficulty → share a browser tab playing music (Spotify, YouTube, etc.).<br>
+    The source tab is muted automatically. Music plays through the game with arrows synced to the beat.<br><br>
+    <kbd>←</kbd><kbd>↓</kbd><kbd>↑</kbd><kbd>→</kbd> or <kbd>D</kbd><kbd>F</kbd><kbd>J</kbd><kbd>K</kbd> &nbsp;|&nbsp; <kbd>Esc</kbd> quit
+  </div>
+</div>
+
+<div id="game">
+  <canvas id="gc"></canvas>
+  <div class="hud">
+    <div class="hud-l"><div id="hs">0</div><div id="hc">0x COMBO</div></div>
+    <div class="hud-r"><div id="ha">100.0%</div><div id="hsong"></div><div id="hlive">● LIVE</div></div>
+  </div>
+  <div id="jdg"></div>
+  <div id="waiting">
+    <div class="wait-content">
+      <div class="wait-icon">♫</div>
+      <div class="wait-title">Waiting for music...</div>
+      <div class="wait-sub">Play a song in the shared tab</div>
+      <div class="wait-hint">Press <kbd>Esc</kbd> to cancel</div>
+    </div>
+  </div>
+</div>
+
+<div id="results">
+  <div class="rcard">
+    <h2>STAGE CLEAR</h2>
+    <div class="rsong" id="rsn"></div>
+    <div class="rscore" id="rsc">0</div>
+    <div class="rgrade" id="rgr">A</div>
+    <div class="rstats">
+      <span class="sl">Perfect</span><span class="sv de" id="rp">0</span>
+      <span class="sl">Great</span><span class="sv dn" id="rg">0</span>
+      <span class="sl">Good</span><span class="sv dh" id="ro">0</span>
+      <span class="sl">Miss</span><span class="sv dx" id="rm">0</span>
+      <span class="sl">Max Combo</span><span class="sv" id="rmc">0</span>
+      <span class="sl">Accuracy</span><span class="sv" id="rac">0%</span>
+    </div>
+    <div class="rbtns">
+      <button class="btn" onclick="showMenu()">Menu</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/state.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/patterns.js"></script>
+<script src="js/particles.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/input.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

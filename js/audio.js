@@ -1,0 +1,270 @@
+// ═══════════════════════════════════════════
+//  BEAT-REACTIVE VISUALS — driven by delayed audio (what the player hears)
+// ═══════════════════════════════════════════
+let beatEnergy = 0;    // overall energy 0-1
+let beatBass = 0;      // bass energy 0-1
+let beatHigh = 0;      // high energy 0-1
+let beatPulse = 0;     // decaying pulse triggered on strong beats
+let prevBeatEnergy = 0;
+
+function sampleBeatVisuals() {
+  if (!vizAnalyser) { beatEnergy = 0; beatBass = 0; beatHigh = 0; return; }
+
+  const fd = new Uint8Array(vizAnalyser.frequencyBinCount);
+  vizAnalyser.getByteFrequencyData(fd);
+
+  const bins = fd.length;
+  // Bass: first 10% of bins, High: 30-60% of bins
+  let bassSum = 0, highSum = 0, totalSum = 0;
+  const bassEnd = Math.floor(bins * 0.1);
+  const highStart = Math.floor(bins * 0.3);
+  const highEnd = Math.floor(bins * 0.6);
+
+  for (let i = 0; i < bins; i++) {
+    totalSum += fd[i];
+    if (i < bassEnd) bassSum += fd[i];
+    if (i >= highStart && i < highEnd) highSum += fd[i];
+  }
+
+  beatEnergy = Math.min(1, (totalSum / bins) / 140);
+  beatBass = Math.min(1, (bassSum / Math.max(1, bassEnd)) / 180);
+  beatHigh = Math.min(1, (highSum / Math.max(1, highEnd - highStart)) / 150);
+
+  // Detect beats: sharp rise in bass energy
+  const delta = beatBass - prevBeatEnergy;
+  if (delta > 0.15) {
+    beatPulse = Math.min(1, beatPulse + delta * 2);
+  }
+  beatPulse *= 0.92; // decay
+  prevBeatEnergy = beatBass;
+}
+
+// ═══════════════════════════════════════════
+//  REAL-TIME ONSET DETECTION — Percussive transients only
+//  Sustained sounds (vocals, pads, strings) are filtered out.
+//  Only sharp attacks (drums, plucks, hits) trigger arrows.
+// ═══════════════════════════════════════════
+let recentFluxes = []; // short ring buffer for transient detection
+
+function detectOnsets() {
+  if (!analyser || !audioCtx) return;
+
+  const C = DIFF[curDiff];
+  const fd = new Float32Array(analyser.frequencyBinCount);
+  analyser.getFloatFrequencyData(fd);
+
+  const now = audioCtx.currentTime - liveRecordStart - analyserLatency;
+  if (now < 0) return;
+
+  const bins = analyser.frequencyBinCount;
+  const binHz = (audioCtx.sampleRate / 2) / bins;
+  const subBassEnd = Math.floor(80 / binHz);
+  const bassEnd = Math.floor(250 / binHz);
+  const midEnd = Math.floor(3000 / binHz);
+  const highEnd = Math.floor(8000 / binHz);
+  const topEnd = Math.min(bins, Math.floor(16000 / binHz));
+
+  // Spectral flux (half-wave rectified)
+  let flux = 0, bassFlux = 0, midFlux = 0, highFlux = 0;
+  for (let i = 0; i < topEnd; i++) {
+    const lin = Math.pow(10, fd[i] / 20);
+    const diff = lin - prevSpec[i];
+    if (diff > 0) {
+      flux += diff;
+      if (i < bassEnd) bassFlux += diff;
+      else if (i < midEnd) midFlux += diff;
+      else if (i < highEnd) highFlux += diff;
+    }
+    prevSpec[i] = lin;
+  }
+
+  // === TRANSIENT vs SUSTAINED filter ===
+  // Percussive hits: sharp spike that decays quickly.
+  // Sustained sounds (vocals, pads): gradual flux that stays elevated.
+  // Track short history (~10 frames ≈ 110ms) and require current frame
+  // to be a clear spike above the recent baseline.
+  recentFluxes.push(flux);
+  if (recentFluxes.length > 12) recentFluxes.shift();
+
+  let isTransient = false;
+  if (recentFluxes.length >= 6) {
+    const curr = flux;
+    // Average of frames 3-6 before this one (skip the 2 most recent to avoid including the rise itself)
+    const lookback = recentFluxes.length;
+    let prevSum = 0, prevCount = 0;
+    for (let i = lookback - 4; i >= Math.max(0, lookback - 8); i--) {
+      prevSum += recentFluxes[i];
+      prevCount++;
+    }
+    const prevAvg = prevCount > 0 ? prevSum / prevCount : 0;
+    // Transient ratio: must exceed difficulty-specific threshold
+    // Easy (3.0): only the hardest drum hits. Impossible (1.3): catches most percussive sounds.
+    const transientRatio = prevAvg > 0.00005 ? curr / prevAvg : 0;
+    isTransient = transientRatio > C.transientTh;
+  }
+
+  if (!isTransient) {
+    // Not a transient — store energy data but don't spawn any arrow
+    liveEnergyData.push({ time: now, flux, bassFlux, midFlux, highFlux });
+    runningEnergyAvg = runningEnergyAvg * 0.97 + flux * 0.03;
+    return;
+  }
+
+  liveEnergyData.push({ time: now, flux, bassFlux, midFlux, highFlux });
+  runningEnergyAvg = runningEnergyAvg * 0.97 + flux * 0.03;
+
+  // Adaptive threshold from recent history
+  const hist = liveEnergyData;
+  const wSize = Math.min(hist.length, 60);
+  const start = hist.length - wSize;
+  if (wSize < 5) return;
+
+  // === DYNAMIC MIN GAP — busier sections = denser arrows ===
+  const energyRatio = runningEnergyAvg > 0.0001 ? Math.min(3, flux / runningEnergyAvg) : 1;
+  const dynamicGap = C.minGap * (1 - C.energyScale * Math.min(1, (energyRatio - 1) / 2));
+  const effectiveGap = Math.max(0.04, dynamicGap);
+
+  if (now - lastOnsetTime < effectiveGap) return;
+
+  // Check each band — bass gets priority (kick drums are the backbone)
+  const bands = [
+    { key: 'bassFlux', val: bassFlux, thM: 0.75 },  // bass very sensitive — kicks/bass hits
+    { key: 'highFlux', val: highFlux, thM: 1.0 },    // highs — snare, hats, cymbals
+    { key: 'flux', val: flux, thM: 1.1 },             // overall — catch anything else
+  ];
+
+  for (const band of bands) {
+    let bSum = 0, bSq = 0;
+    for (let i = start; i < hist.length - 1; i++) {
+      bSum += hist[i][band.key];
+      bSq += hist[i][band.key] * hist[i][band.key];
+    }
+    const bMean = bSum / (wSize - 1);
+    const bStd = Math.sqrt(Math.max(0, bSq / (wSize - 1) - bMean * bMean));
+    const bThresh = bMean + bStd * SENS * band.thM;
+
+    if (band.val > bThresh && band.val > 0.0003) {
+      const onsetStrength = bThresh > 0 ? band.val / bThresh : 1;
+      spawnArrow(now, band.key === 'bassFlux' ? 'bass' : band.key === 'highFlux' ? 'high' : 'mid', onsetStrength);
+      lastOnsetTime = now;
+      break;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════
+//  AUDIO CAPTURE & CLEANUP
+// ═══════════════════════════════════════════
+function cleanup() {
+  if (delayNode) { delayNode.disconnect(); delayNode = null; }
+  if (vizAnalyser) { vizAnalyser.disconnect(); vizAnalyser = null; }
+  if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+  if (audioCtx) audioCtx.close().catch(() => {});
+  mediaStream = null; audioCtx = null; analyser = null;
+}
+
+async function startLive(diff) {
+  curDiff = diff;
+
+  try {
+    mediaStream = await navigator.mediaDevices.getDisplayMedia({
+      video: { width: 1, height: 1, frameRate: 1 },
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        suppressLocalAudioPlayback: true
+      },
+      suppressLocalAudioPlayback: true
+    });
+
+    if (!mediaStream.getAudioTracks().length) {
+      alert('No audio track. Make sure to check "Share tab audio".');
+      mediaStream.getTracks().forEach(t => t.stop());
+      return;
+    }
+    mediaStream.getVideoTracks().forEach(t => t.stop());
+
+    try {
+      await mediaStream.getAudioTracks()[0].applyConstraints({
+        echoCancellation: false, noiseSuppression: false, autoGainControl: false
+      });
+    } catch(e) {}
+
+  } catch(e) {
+    alert('Screen sharing was cancelled.');
+    return;
+  }
+
+  // === AUDIO CONTEXT ===
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+  const src = audioCtx.createMediaStreamSource(mediaStream);
+
+  // === ANALYSER — real-time onset detection (NOT connected to speakers) ===
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 4096;
+  analyser.smoothingTimeConstant = 0.15;
+  analyserLatency = analyser.fftSize / audioCtx.sampleRate / 2;
+  src.connect(analyser);
+
+  // === DELAY NODE — player hears audio AUDIO_DELAY seconds after capture ===
+  delayNode = audioCtx.createDelay(AUDIO_DELAY + 1);
+  delayNode.delayTime.value = AUDIO_DELAY;
+  src.connect(delayNode);
+  delayNode.connect(audioCtx.destination);
+
+  // === VIZ ANALYSER — connected to delayed audio for beat-synced visuals ===
+  vizAnalyser = audioCtx.createAnalyser();
+  vizAnalyser.fftSize = 512; // small FFT = fast, we just need energy levels
+  vizAnalyser.smoothingTimeConstant = 0.7; // smooth for visuals
+  delayNode.connect(vizAnalyser);
+
+  // Init state
+  prevSpec = new Float32Array(analyser.frequencyBinCount);
+  liveEnergyData = [];
+  liveRecordStart = audioCtx.currentTime;
+  lastOnsetTime = -Infinity;
+  prevDir = -1; ppDir = -1;
+  noteIdCounter = 0;
+  streamEnded = false;
+  runningEnergyAvg = 0;
+  recentFluxes = [];
+  lastDirTime = [0, 0, 0, 0];
+  patternType = 'random'; patternCounter = 0; patternLen = 0; patternData = null;
+
+  // Setup game
+  gNotes = [];
+  gScore = 0; gCombo = 0; gMaxCombo = 0;
+  gJdg = {perfect:0,great:0,good:0,miss:0};
+  rFlash = {left:0,down:0,up:0,right:0};
+  jTimer = 0;
+  particles = []; perfectRings = []; perfectCount = 0;
+
+  document.getElementById('menu').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('game').style.display = 'block';
+  document.getElementById('hsong').textContent = DIFF[diff].label;
+  musicDetected = false;
+
+  // Show waiting overlay
+  const waitEl = document.getElementById('waiting');
+  waitEl.classList.remove('hidden');
+
+  gCanvas = document.getElementById('gc');
+  gCtx = gCanvas.getContext('2d');
+  resizeC();
+
+  gActive = true;
+  gStart = performance.now();
+  gRAF = requestAnimationFrame(gameLoop);
+
+  // When sharing stops, wait for delay buffer to drain then show results
+  mediaStream.getAudioTracks()[0].onended = () => {
+    streamEnded = true;
+    // Wait for the AUDIO_DELAY buffer to finish playing + time for last arrows
+    setTimeout(() => {
+      gActive = false;
+      showResults();
+    }, (AUDIO_DELAY + 2) * 1000);
+  };
+}
