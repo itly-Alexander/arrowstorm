@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(chmod +x .git/hooks/post-commit)",
-      "Bash(ls c:/Dev/arrowstorm/*.ico c:/Dev/arrowstorm/*.png c:/Dev/arrowstorm/favicon*)"
+      "Bash(ls c:/Dev/arrowstorm/*.ico c:/Dev/arrowstorm/*.png c:/Dev/arrowstorm/favicon*)",
+      "Bash(npm init:*)",
+      "Bash(npm run:*)"
     ]
   }
 }
