@@ -69,9 +69,13 @@ console.log('  -> dist/index.html');
 // Copy static assets
 fs.cpSync(path.join(__dirname, 'css'), path.join(DIST, 'css'), { recursive: true });
 console.log('  -> dist/css/');
-if (fs.existsSync(path.join(__dirname, 'favicon.svg'))) {
-  fs.copyFileSync(path.join(__dirname, 'favicon.svg'), path.join(DIST, 'favicon.svg'));
-  console.log('  -> dist/favicon.svg');
+// Copy root static files
+const rootFiles = ['favicon.svg', 'robots.txt', 'sitemap.xml', 'CNAME', 'og-image.png'];
+for (const f of rootFiles) {
+  if (fs.existsSync(path.join(__dirname, f))) {
+    fs.copyFileSync(path.join(__dirname, f), path.join(DIST, f));
+    console.log(`  -> dist/${f}`);
+  }
 }
 
 const srcSize = (bundle.length / 1024).toFixed(1);
