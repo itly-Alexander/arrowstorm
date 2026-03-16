@@ -100,7 +100,9 @@ function detectOnsets() {
     // Transient ratio: must exceed difficulty-specific threshold
     // Easy (3.0): only the hardest drum hits. Impossible (1.3): catches most percussive sounds.
     const transientRatio = prevAvg > 0.00005 ? curr / prevAvg : 0;
-    isTransient = transientRatio > C.transientTh;
+    // Strike mode: require much sharper transients — only the clearest beats
+    const effTransientTh = gameMode === 'strike' ? C.transientTh * 1.5 : C.transientTh;
+    isTransient = transientRatio > effTransientTh;
   }
 
   if (!isTransient) {
@@ -121,16 +123,21 @@ function detectOnsets() {
 
   // === DYNAMIC MIN GAP — busier sections = denser arrows ===
   const energyRatio = runningEnergyAvg > 0.0001 ? Math.min(3, flux / runningEnergyAvg) : 1;
-  const dynamicGap = C.minGap * (1 - C.energyScale * Math.min(1, (energyRatio - 1) / 2));
+  // Strike mode needs much wider gaps — mouse travel between circles takes real time
+  const strikeGapFloor = { easy: 0.9, normal: 0.7, hard: 0.55, extreme: 0.45, impossible: 0.35 };
+  const baseGap = gameMode === 'strike' ? Math.max(C.minGap, strikeGapFloor[curDiff] || 0.7) : C.minGap;
+  const dynamicGap = baseGap * (1 - C.energyScale * Math.min(1, (energyRatio - 1) / 2));
   const effectiveGap = Math.max(0.04, dynamicGap);
 
   if (now - lastOnsetTime < effectiveGap) return;
 
   // Check each band — bass gets priority (kick drums are the backbone)
+  // Strike mode: higher sensitivity multiplier so only the strongest onsets pass
+  const strikeSensMul = gameMode === 'strike' ? 1.4 : 1.0;
   const bands = [
-    { key: 'bassFlux', val: bassFlux, thM: 0.75 },  // bass very sensitive — kicks/bass hits
-    { key: 'highFlux', val: highFlux, thM: 1.0 },    // highs — snare, hats, cymbals
-    { key: 'flux', val: flux, thM: 1.1 },             // overall — catch anything else
+    { key: 'bassFlux', val: bassFlux, thM: 0.75 * strikeSensMul },
+    { key: 'highFlux', val: highFlux, thM: 1.0 * strikeSensMul },
+    { key: 'flux', val: flux, thM: 1.1 * strikeSensMul },
   ];
 
   for (const band of bands) {
@@ -161,6 +168,7 @@ function cleanup() {
   if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
   if (audioCtx) audioCtx.close().catch(() => {});
   mediaStream = null; audioCtx = null; analyser = null;
+  if (gCanvas) gCanvas.style.cursor = '';
 }
 
 async function startLive(diff) {
@@ -251,6 +259,10 @@ async function startLiveAfterTutorial(diff) {
   jTimer = 0;
   particles = []; perfectRings = []; perfectCount = 0;
 
+  // Strike mode state
+  sCursorX = 0; sCursorY = 0;
+  sLastX = innerWidth / 2; sLastY = innerHeight / 2;
+
   document.getElementById('menu').style.display = 'none';
   document.getElementById('results').style.display = 'none';
   document.getElementById('game').style.display = 'block';
@@ -264,6 +276,9 @@ async function startLiveAfterTutorial(diff) {
   gCanvas = document.getElementById('gc');
   gCtx = gCanvas.getContext('2d');
   resizeC();
+
+  // Hide system cursor in strike mode (custom cursor drawn on canvas)
+  gCanvas.style.cursor = gameMode === 'strike' ? 'none' : '';
 
   gActive = true;
   gStart = performance.now();

@@ -82,6 +82,29 @@ function pickNewPattern() {
 const CHORDS_2 = [[0,1],[1,2],[2,3],[0,3],[0,2],[1,3]]; // doubles: L+D, D+U, U+R, L+R, L+U, D+R
 const CHORDS_3 = [[0,1,2],[1,2,3],[0,2,3],[0,1,3]]; // triples
 
+// Strike mode — generate circle position with controlled spacing
+function getStrikePos() {
+  const W = innerWidth, H = innerHeight;
+  const margin = 90;
+  const minDist = 60;
+  const maxDist = 280;
+
+  let x, y, attempts = 0;
+  do {
+    x = margin + Math.random() * (W - margin * 2);
+    y = margin + Math.random() * (H - margin * 2);
+    const dx = x - sLastX;
+    const dy = y - sLastY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist >= minDist && dist <= maxDist) break;
+    attempts++;
+  } while (attempts < 30);
+
+  sLastX = x;
+  sLastY = y;
+  return { x, y };
+}
+
 function spawnArrow(audioTime, band, onsetStrength) {
   const C = DIFF[curDiff];
 
@@ -90,9 +113,9 @@ function spawnArrow(audioTime, band, onsetStrength) {
   const isVeryStrong = onsetStrength > 2.5;
   const isStrong = onsetStrength > 1.8;
 
-  if (isVeryStrong && Math.random() < C.tripleChance) {
+  if (gameMode !== 'strike' && isVeryStrong && Math.random() < C.tripleChance) {
     arrowDirs = CHORDS_3[Math.floor(Math.random() * CHORDS_3.length)];
-  } else if (isStrong && Math.random() < C.chordChance) {
+  } else if (gameMode !== 'strike' && isStrong && Math.random() < C.chordChance) {
     arrowDirs = CHORDS_2[Math.floor(Math.random() * CHORDS_2.length)];
   } else {
     // Single arrow — use pattern system
@@ -131,7 +154,7 @@ function spawnArrow(audioTime, band, onsetStrength) {
   const chordId = noteIdCounter++;
   for (const d of arrowDirs) {
     lastDirTime[d] = audioTime;
-    gNotes.push({
+    const note = {
       time: hitTime,
       dir: d,
       id: noteIdCounter++,
@@ -139,6 +162,13 @@ function spawnArrow(audioTime, band, onsetStrength) {
       hit: false,
       missed: false,
       y: 0
-    });
+    };
+    // Strike mode: assign screen position
+    if (gameMode === 'strike') {
+      const pos = getStrikePos();
+      note.cx = pos.x;
+      note.cy = pos.y;
+    }
+    gNotes.push(note);
   }
 }

@@ -1,10 +1,11 @@
 // ═══════════════════════════════════════════
 //  GAME LOOP & RENDERING
 // ═══════════════════════════════════════════
+const STRIKE_R = 38;         // hit circle radius
+const STRIKE_AR = 2.0;       // approach rate (ring shrink speed per second)
+const STRIKE_VISIBLE = 1.8;  // seconds before hit time circles appear
+
 function getElapsed() {
-  // Game clock = audioCtx time since recording started.
-  // Arrows have hitTime = onsetTime + AUDIO_DELAY.
-  // When elapsed reaches hitTime, the delayed audio is playing that beat.
   if (!audioCtx) return 0;
   return audioCtx.currentTime - liveRecordStart;
 }
@@ -17,7 +18,6 @@ function gameLoop() {
   sampleBeatVisuals();
 
   // Detect when music actually starts playing — hide waiting overlay
-  // Use liveEnergyData (real-time, no delay) to detect audio presence quickly
   if (!musicDetected && liveEnergyData.length > 10) {
     const recent = liveEnergyData.slice(-5);
     const avgFlux = recent.reduce((s, d) => s + d.flux, 0) / recent.length;
@@ -31,7 +31,7 @@ function gameLoop() {
   const W = innerWidth, H = innerHeight, ctx = gCtx;
   ctx.clearRect(0, 0, W, H);
 
-  // ── BEAT-REACTIVE BACKGROUND ──
+  // ── SHARED BEAT-REACTIVE BACKGROUND ──
   const theme = getBgTheme();
   const bg = ctx.createLinearGradient(0,0,0,H);
   bg.addColorStop(0, `rgba(${theme.base[0]},${theme.base[1]},${Math.floor(theme.base[2] + beatBass * theme.bassShift[2])},1)`);
@@ -43,24 +43,7 @@ function gameLoop() {
   ctx.fillStyle = 'rgba(255,255,255,.008)';
   for (let y = 0; y < H; y += 4) ctx.fillRect(0,y,W,1);
 
-  // Lane area
-  const lw = CW*4+40, lx = (W-lw)/2;
-  const lg = ctx.createLinearGradient(lx,0,lx+lw,0);
-  const laneAlpha = 0.02 + beatEnergy * 0.02;
-  lg.addColorStop(0,'transparent');
-  lg.addColorStop(.1,`rgba(255,255,255,${laneAlpha})`);
-  lg.addColorStop(.9,`rgba(255,255,255,${laneAlpha})`);
-  lg.addColorStop(1,'transparent');
-  ctx.fillStyle = lg; ctx.fillRect(lx,0,lw,H);
-
-  // Receptor line — pulses with bass
-  const receptorAlpha = 0.15 + beatPulse * 0.4;
-  const receptorWidth = 1 + beatPulse * 2;
-  ctx.strokeStyle = `rgba(255,255,255,${receptorAlpha})`;
-  ctx.lineWidth = receptorWidth;
-  ctx.beginPath(); ctx.moveTo(lx,RY); ctx.lineTo(lx+lw,RY); ctx.stroke();
-
-  // Bass pulse glow — radiates from center on beat hits
+  // Bass pulse glow
   if (beatPulse > 0.05) {
     const cx = W/2, cy = H * 0.5;
     const pulseR = 100 + beatPulse * 300;
@@ -72,7 +55,7 @@ function gameLoop() {
     ctx.fillRect(cx - pulseR, cy - pulseR, pulseR*2, pulseR*2);
   }
 
-  // Side edge glow — bass on left, high on right
+  // Side edge glows
   if (beatBass > 0.2) {
     const edgeGrad = ctx.createLinearGradient(0,0,80,0);
     edgeGrad.addColorStop(0, `rgba(255,45,85,${beatBass * 0.12})`);
@@ -88,13 +71,66 @@ function gameLoop() {
     ctx.fillRect(W-80,0,80,H);
   }
 
-  // Combo glow
-  if (gCombo > 10) {
-    ctx.fillStyle = `rgba(118,255,3,${Math.min(.15, gCombo/500)})`;
-    ctx.fillRect(lx,0,lw,H);
+  // ── MODE-SPECIFIC RENDERING ──
+  if (gameMode === 'strike') {
+    renderStrike(ctx, elapsed, W, H);
+  } else {
+    // Lane area (classic only)
+    const lw = CW*4+40, lx = (W-lw)/2;
+    const lg = ctx.createLinearGradient(lx,0,lx+lw,0);
+    const laneAlpha = 0.02 + beatEnergy * 0.02;
+    lg.addColorStop(0,'transparent');
+    lg.addColorStop(.1,`rgba(255,255,255,${laneAlpha})`);
+    lg.addColorStop(.9,`rgba(255,255,255,${laneAlpha})`);
+    lg.addColorStop(1,'transparent');
+    ctx.fillStyle = lg; ctx.fillRect(lx,0,lw,H);
+
+    // Combo glow (classic)
+    if (gCombo > 10) {
+      ctx.fillStyle = `rgba(118,255,3,${Math.min(.15, gCombo/500)})`;
+      ctx.fillRect(lx,0,lw,H);
+    }
+
+    const sx = (W - CW*4) / 2;
+    renderClassic(ctx, elapsed, W, H, sx, lx, lw);
   }
 
-  const sx = (W - CW*4) / 2;
+  // ── SHARED HUD ──
+  document.getElementById('hs').textContent = gScore.toLocaleString();
+  const ce = document.getElementById('hc');
+  ce.textContent = `${gCombo}x COMBO`;
+  ce.className = gCombo >= 50 ? 'big' : '';
+  const tj = gJdg.perfect + gJdg.great + gJdg.good + gJdg.miss;
+  document.getElementById('ha').textContent =
+    (tj > 0 ? ((gJdg.perfect*100 + gJdg.great*70 + gJdg.good*40) / (tj*100) * 100) : 100).toFixed(1) + '%';
+
+  // Particles and effects
+  updateAndDrawParticles(ctx);
+
+  // Judgment fade
+  if (jTimer > 0) {
+    jTimer -= 16;
+    const el = document.getElementById('jdg');
+    el.style.opacity = Math.min(1, jTimer / 200);
+    el.style.transform = `translate(-50%,-50%) scale(${1 + (1 - jTimer/500) * .3})`;
+  }
+
+  // Pulse combo text glow with beat
+  if (gCombo > 0) {
+    document.getElementById('hc').style.textShadow = `0 0 ${8 + beatPulse * 20}px currentColor`;
+  }
+}
+
+// ═══════════════════════════════════════════
+//  CLASSIC MODE RENDERING
+// ═══════════════════════════════════════════
+function renderClassic(ctx, elapsed, W, H, sx, lx, lw) {
+  // Receptor line
+  const receptorAlpha = 0.15 + beatPulse * 0.4;
+  const receptorWidth = 1 + beatPulse * 2;
+  ctx.strokeStyle = `rgba(255,255,255,${receptorAlpha})`;
+  ctx.lineWidth = receptorWidth;
+  ctx.beginPath(); ctx.moveTo(lx,RY); ctx.lineTo(lx+lw,RY); ctx.stroke();
 
   // Receptors
   for (let i = 0; i < 4; i++) {
@@ -109,8 +145,7 @@ function gameLoop() {
     drawArr(ctx, x, RY, dir, NS, col.m, .4 + fl*.6, true);
   }
 
-  // Notes — first pass: draw chord connection bars
-  // Group notes by chordId to find simultaneous arrows
+  // Chord connection bars
   const chordGroups = {};
   for (const n of gNotes) {
     if (n.hit || n.missed || n.chordId === undefined) continue;
@@ -129,21 +164,17 @@ function gameLoop() {
     const x1 = sx + dirs[0] * CW + CW/2;
     const x2 = sx + dirs[dirs.length - 1] * CW + CW/2;
     const alpha = y < RY ? Math.max(.1, .6 - (RY - y) / 300) : 0.6;
-    // Glowing connection bar
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.strokeStyle = 'rgba(255,255,255,.5)';
     ctx.lineWidth = 3;
     ctx.shadowBlur = 10;
     ctx.shadowColor = 'rgba(255,255,255,.3)';
-    ctx.beginPath();
-    ctx.moveTo(x1, y);
-    ctx.lineTo(x2, y);
-    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke();
     ctx.restore();
   }
 
-  // Notes — second pass: draw arrows
+  // Note arrows
   for (const n of gNotes) {
     if (n.hit || n.missed) continue;
     const td = n.time - elapsed;
@@ -157,33 +188,128 @@ function gameLoop() {
     const alpha = y < RY ? Math.max(.2, 1 - (RY - y) / 200) : 1;
     drawArr(ctx, x, y, DIRS[n.dir], NS, ACOL[DIRS[n.dir]].m, alpha, false);
   }
-
-  // HUD
-  document.getElementById('hs').textContent = gScore.toLocaleString();
-  const ce = document.getElementById('hc');
-  ce.textContent = `${gCombo}x COMBO`;
-  ce.className = gCombo >= 50 ? 'big' : '';
-  const tj = gJdg.perfect + gJdg.great + gJdg.good + gJdg.miss;
-  document.getElementById('ha').textContent =
-    (tj > 0 ? ((gJdg.perfect*100 + gJdg.great*70 + gJdg.good*40) / (tj*100) * 100) : 100).toFixed(1) + '%';
-
-  // Particles and effects (drawn on top of everything)
-  updateAndDrawParticles(ctx);
-
-  // Judgment fade
-  if (jTimer > 0) {
-    jTimer -= 16;
-    const el = document.getElementById('jdg');
-    el.style.opacity = Math.min(1, jTimer / 200);
-    el.style.transform = `translate(-50%,-50%) scale(${1 + (1 - jTimer/500) * .3})`;
-  }
-
-  // Pulse combo text glow with beat
-  if (gCombo > 0) {
-    document.getElementById('hc').style.textShadow = `0 0 ${8 + beatPulse * 20}px currentColor`;
-  }
 }
 
+// ═══════════════════════════════════════════
+//  STRIKE MODE RENDERING
+// ═══════════════════════════════════════════
+function renderStrike(ctx, elapsed, W, H) {
+  // Combo glow (full screen)
+  if (gCombo > 10) {
+    ctx.fillStyle = `rgba(118,255,3,${Math.min(.1, gCombo/600)})`;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  // Process and draw circles
+  let circleNum = 1;
+  for (const n of gNotes) {
+    if (n.hit || n.missed) continue;
+    const td = n.time - elapsed;
+
+    // Auto-miss: time expired
+    if (td < -JDG.miss.w / 1000) {
+      n.missed = true;
+      gCombo = 0;
+      gJdg.miss++;
+      showJ('miss');
+      // Miss flash at circle position
+      spawnPerfectEffect(n.cx, n.cy, '#ff2d55', false);
+      continue;
+    }
+
+    // Only draw if within visible window
+    if (td > STRIKE_VISIBLE) continue;
+
+    drawStrikeCircle(ctx, n.cx, n.cy, n.dir, td, circleNum);
+    circleNum++;
+  }
+
+  // Cursor
+  ctx.save();
+  ctx.shadowBlur = 12;
+  ctx.shadowColor = 'rgba(255,255,255,.6)';
+  // Outer ring
+  ctx.strokeStyle = 'rgba(255,255,255,.7)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(sCursorX, sCursorY, 10, 0, Math.PI * 2);
+  ctx.stroke();
+  // Center dot
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(sCursorX, sCursorY, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawStrikeCircle(ctx, x, y, dirIdx, td, num) {
+  const col = ACOL[DIRS[dirIdx]];
+  const r = STRIKE_R;
+
+  // Fade in over first 0.2s of visibility
+  const fadeIn = td > STRIKE_VISIBLE - 0.2 ? (STRIKE_VISIBLE - td) / 0.2 : 1;
+  const alpha = Math.max(0, Math.min(1, fadeIn));
+
+  // Approach circle (shrinks toward hit circle)
+  if (td > 0) {
+    const ar = r * (1 + td * STRIKE_AR);
+    ctx.save();
+    ctx.globalAlpha = alpha * 0.6;
+    ctx.strokeStyle = col.m;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(x, y, ar, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Hit circle — filled background
+  ctx.save();
+  ctx.globalAlpha = alpha * 0.25;
+  ctx.fillStyle = col.m;
+  ctx.shadowBlur = 15 + beatPulse * 10;
+  ctx.shadowColor = col.m;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Circle border
+  ctx.save();
+  ctx.globalAlpha = alpha * 0.9;
+  ctx.strokeStyle = col.m;
+  ctx.lineWidth = 3;
+  ctx.shadowBlur = 12;
+  ctx.shadowColor = col.m;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+
+  // White inner ring
+  ctx.save();
+  ctx.globalAlpha = alpha * 0.4;
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(x, y, r - 5, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+
+  // Number
+  ctx.save();
+  ctx.globalAlpha = alpha * 0.9;
+  ctx.fillStyle = '#fff';
+  ctx.font = "bold 16px 'Orbitron',sans-serif";
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(num, x, y);
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════
+//  ARROW DRAWING
+// ═══════════════════════════════════════════
 function drawArr(ctx, x, y, dir, sz, col, a, rec) {
   ctx.save(); ctx.globalAlpha = a; ctx.translate(x, y);
   ctx.rotate({left:Math.PI, down:Math.PI/2, up:-Math.PI/2, right:0}[dir]);
@@ -194,7 +320,6 @@ function drawArr(ctx, x, y, dir, sz, col, a, rec) {
     ctx.lineTo(-s*.3,s*.7); ctx.closePath();
   };
   if (!rec) {
-    // Note arrows: glow intensity pulses with the beat
     const glowSize = 15 + beatPulse * 12;
     ctx.shadowBlur = glowSize; ctx.shadowColor = col; ctx.fillStyle = col; p(); ctx.fill();
     ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(255,255,255,.25)';
@@ -202,12 +327,14 @@ function drawArr(ctx, x, y, dir, sz, col, a, rec) {
     ctx.lineTo(-s*.55,-s*.15); ctx.lineTo(-s*.55,s*.15); ctx.lineTo(-s*.1,s*.15);
     ctx.lineTo(-s*.1,s*.45); ctx.closePath(); ctx.fill();
   } else {
-    // Receptor arrows: line width pulses subtly with bass
     ctx.strokeStyle = col; ctx.lineWidth = 2.5 + beatBass * 1.5; p(); ctx.stroke();
   }
   ctx.restore();
 }
 
+// ═══════════════════════════════════════════
+//  JUDGMENT DISPLAY
+// ═══════════════════════════════════════════
 function showJ(type) {
   const j = JDG[type], el = document.getElementById('jdg');
   el.textContent = j.t; el.style.color = j.c;
@@ -215,6 +342,9 @@ function showJ(type) {
   jTimer = 500;
 }
 
+// ═══════════════════════════════════════════
+//  HIT NOTE (classic mode)
+// ═══════════════════════════════════════════
 function hitNote(dir) {
   if (!gActive) return;
   const elapsed = getElapsed();
@@ -238,17 +368,72 @@ function hitNote(dir) {
   if (j === 'miss') { gCombo = 0; perfectCount = 0; }
   else { gCombo++; if (gCombo > gMaxCombo) gMaxCombo = gCombo; }
 
-  // Subtle particle effect on perfect hits — not every time
   if (j === 'perfect') {
     perfectCount++;
     const sx = (innerWidth - CW * 4) / 2;
     const px = sx + best.dir * CW + CW / 2;
-    // Small sparkle every 3rd perfect, bigger burst on combo milestones (10, 25, 50, 100...)
     const isComboMilestone = gCombo > 0 && (gCombo % 25 === 0 || gCombo === 10);
     if (isComboMilestone) {
       spawnPerfectEffect(px, RY, ACOL[DIRS[best.dir]].m, true);
     } else if (perfectCount % 3 === 0) {
       spawnPerfectEffect(px, RY, ACOL[DIRS[best.dir]].m, false);
+    }
+  } else {
+    perfectCount = 0;
+  }
+
+  gJdg[j]++;
+  gScore += Math.floor(JDG[j].s * (1 + Math.floor(gCombo / 10) * .1));
+  showJ(j);
+}
+
+// ═══════════════════════════════════════════
+//  STRIKE CLICK (strike mode)
+// ═══════════════════════════════════════════
+function strikeClick() {
+  if (!gActive) return;
+  const elapsed = getElapsed();
+
+  // Find the earliest clickable circle under the cursor
+  let best = null, bestD = Infinity;
+  for (const n of gNotes) {
+    if (n.hit || n.missed) continue;
+    const td = n.time - elapsed;
+    if (td > STRIKE_VISIBLE) continue;
+    const timeDist = Math.abs(td) * 1000;
+    if (timeDist >= JDG.miss.w) continue;
+    // Check cursor within hit radius
+    const dx = sCursorX - n.cx;
+    const dy = sCursorY - n.cy;
+    const spatialDist = Math.sqrt(dx * dx + dy * dy);
+    if (spatialDist > STRIKE_R * 1.4) continue;
+    // Prefer earliest note
+    if (n.time < (best ? best.time : Infinity)) {
+      best = n;
+      bestD = timeDist;
+    }
+  }
+
+  if (!best) return;
+  best.hit = true;
+
+  let j;
+  if (bestD <= JDG.perfect.w) j = 'perfect';
+  else if (bestD <= JDG.great.w) j = 'great';
+  else if (bestD <= JDG.good.w) j = 'good';
+  else j = 'miss';
+
+  if (j === 'miss') { gCombo = 0; perfectCount = 0; }
+  else { gCombo++; if (gCombo > gMaxCombo) gMaxCombo = gCombo; }
+
+  // Particle effect at circle position
+  if (j === 'perfect') {
+    perfectCount++;
+    const isComboMilestone = gCombo > 0 && (gCombo % 25 === 0 || gCombo === 10);
+    if (isComboMilestone) {
+      spawnPerfectEffect(best.cx, best.cy, ACOL[DIRS[best.dir]].m, true);
+    } else if (perfectCount % 3 === 0) {
+      spawnPerfectEffect(best.cx, best.cy, ACOL[DIRS[best.dir]].m, false);
     }
   } else {
     perfectCount = 0;

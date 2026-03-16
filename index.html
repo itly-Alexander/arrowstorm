@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ArrowStorm</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -12,8 +13,21 @@
   <h1 onclick="easterEggClick()">ARROWSTORM</h1>
   <canvas id="egg-canvas"></canvas>
   <p class="sub">Rhythm Unleashed</p>
-  <div class="sec">
-    <h2>Pick Difficulty & Share a Tab Playing Music</h2>
+  <div class="sec" id="mode-select">
+    <h2>Choose Your Mode</h2>
+    <div class="row">
+      <button class="btn mode-btn mode-classic" onclick="showDiffSelect('classic')">
+        <span class="mode-label">CLASSIC</span>
+        <span class="mode-sub">Hit arrows to the beat</span>
+      </button>
+      <button class="btn mode-btn mode-strike" onclick="showDiffSelect('strike')">
+        <span class="mode-label">STRIKE</span>
+        <span class="mode-sub">Click to the beat</span>
+      </button>
+    </div>
+  </div>
+  <div class="sec" id="diff-select" style="display:none">
+    <h2 id="diff-title">Select Difficulty</h2>
     <div class="row">
       <button class="btn de" onclick="startLive('easy')">Easy</button>
       <button class="btn dn" onclick="startLive('normal')">Normal</button>
@@ -21,10 +35,11 @@
       <button class="btn dx" onclick="startLive('extreme')">Extreme</button>
       <button class="btn di" onclick="startLive('impossible')">Impossible</button>
     </div>
+    <button class="btn back-btn" onclick="showModeSelect()">BACK</button>
   </div>
-  <div class="info">
-    Pick difficulty → share a browser tab playing music (Spotify, YouTube, etc.).<br>
-    The source tab is muted automatically. Music plays through the game with arrows synced to the beat.<br><br>
+  <div class="info" id="game-info">
+    Share a browser tab playing music (Spotify, YouTube, etc.).<br>
+    The source tab is muted automatically. Music plays through the game synced to the beat.<br><br>
     <kbd>←</kbd><kbd>↓</kbd><kbd>↑</kbd><kbd>→</kbd> or <kbd>D</kbd><kbd>F</kbd><kbd>J</kbd><kbd>K</kbd> &nbsp;|&nbsp; <kbd>Esc</kbd> quit
   </div>
   <button class="btn settings-btn" onclick="openSettings()">Settings</button>
@@ -150,10 +165,10 @@
     <div class="rscore" id="rsc">0</div>
     <div class="rgrade" id="rgr">A</div>
     <div class="rstats">
-      <span class="sl">Perfect</span><span class="sv de" id="rp">0</span>
-      <span class="sl">Great</span><span class="sv dn" id="rg">0</span>
-      <span class="sl">Good</span><span class="sv dh" id="ro">0</span>
-      <span class="sl">Miss</span><span class="sv dx" id="rm">0</span>
+      <span class="sl" id="rl-p">Perfect</span><span class="sv de" id="rp">0</span>
+      <span class="sl" id="rl-g">Great</span><span class="sv dn" id="rg">0</span>
+      <span class="sl" id="rl-o">Good</span><span class="sv dh" id="ro">0</span>
+      <span class="sl" id="rl-m">Miss</span><span class="sv dx" id="rm">0</span>
       <span class="sl">Max Combo</span><span class="sv" id="rmc">0</span>
       <span class="sl">Accuracy</span><span class="sv" id="rac">0%</span>
     </div>

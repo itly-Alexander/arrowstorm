@@ -9,6 +9,11 @@ let gRAF, gCanvas, gCtx;
 let rFlash = {left:0,down:0,up:0,right:0};
 let jTimer = 0;
 let curDiff = 'normal';
+let gameMode = 'classic'; // 'classic' | 'strike'
+
+// Strike mode state
+let sCursorX = 0, sCursorY = 0; // mouse position
+let sLastX = 0, sLastY = 0;     // last spawned circle position
 
 // Live audio state
 let mediaStream, audioCtx, analyser, scriptNode, delayNode;
