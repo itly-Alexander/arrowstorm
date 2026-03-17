@@ -3,10 +3,10 @@
 // ═══════════════════════════════════════════
 const DIFF = {
   // transientTh: spike sharpness required (lower = more arrows). sameGap: extra gap for same-direction repeats.
-  easy:      { subdiv:1, minGap:.38, sameGap:.60, burstChance:0,   chordChance:0,   tripleChance:0,    energyScale:0.2, transientTh:2.5,  label:'Easy' },
-  normal:    { subdiv:2, minGap:.22, sameGap:.40, burstChance:.06,  chordChance:.05, tripleChance:0,    energyScale:0.3, transientTh:2.0,  label:'Normal' },
-  hard:      { subdiv:3, minGap:.15, sameGap:.28, burstChance:.12,  chordChance:.10, tripleChance:.02,  energyScale:0.4, transientTh:1.7,  label:'Hard' },
-  extreme:   { subdiv:4, minGap:.09, sameGap:.18, burstChance:.20,  chordChance:.20, tripleChance:.06,  energyScale:0.55,transientTh:1.4,  label:'Extreme' },
+  easy:      { subdiv:1, minGap:.38, sameGap:.60, burstChance:0,   chordChance:0,   tripleChance:0,    energyScale:0.2, transientTh:3.0,  label:'Easy' },
+  normal:    { subdiv:2, minGap:.22, sameGap:.40, burstChance:.06,  chordChance:.05, tripleChance:0,    energyScale:0.3, transientTh:2.5,  label:'Normal' },
+  hard:      { subdiv:3, minGap:.15, sameGap:.28, burstChance:.12,  chordChance:.10, tripleChance:.02,  energyScale:0.4, transientTh:2.0,  label:'Hard' },
+  extreme:   { subdiv:4, minGap:.09, sameGap:.18, burstChance:.20,  chordChance:.20, tripleChance:.06,  energyScale:0.55,transientTh:1.5,  label:'Extreme' },
   impossible:{ subdiv:8, minGap:.05, sameGap:.12, burstChance:.32,  chordChance:.30, tripleChance:.12,  energyScale:0.7, transientTh:1.2,  label:'Impossible' }
 };
 

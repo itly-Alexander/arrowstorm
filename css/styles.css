@@ -16,12 +16,14 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 .mode-btn{display:flex;flex-direction:column;align-items:center;gap:.35rem;padding:1.2rem 2.2rem;min-width:150px}
 .mode-label{font-size:1.15rem;font-weight:900;letter-spacing:.12em}
 .mode-sub{font-size:.55rem;font-weight:400;color:var(--dim);letter-spacing:.06em;text-transform:uppercase}
+.badge-new{font-size:.5rem;font-weight:700;letter-spacing:.12em;color:#0a0a12;background:var(--al);padding:.15em .45em;border-radius:2px;vertical-align:middle;margin-left:.4em;animation:badgePulse 2s ease-in-out infinite}
+@keyframes badgePulse{0%,100%{opacity:1}50%{opacity:.6}}
 .mode-classic:hover{border-color:var(--au);background:rgba(118,255,3,.06)}
 .mode-strike:hover{border-color:var(--al);background:rgba(255,45,85,.06)}
 .back-btn{margin-top:1rem;font-size:.7rem;padding:.5rem 1.5rem;border-color:rgba(255,255,255,.15)}
 .info{color:var(--dim);font-size:.8rem;text-align:center;max-width:520px;line-height:1.6;margin-top:1.5rem}
 .settings-btn{margin-top:1.5rem;font-size:.75rem;padding:.5rem 1.4rem}
-.version{position:absolute;bottom:1rem;left:50%;transform:translateX(-50%);font-family:'Orbitron',sans-serif;font-size:.65rem;color:rgba(106,106,122,.4);letter-spacing:.15em}
+.version{position:absolute;bottom:1rem;left:50%;transform:translateX(-50%);font-family:'Orbitron',sans-serif;font-size:.65rem;color:rgba(180,180,195,.55);letter-spacing:.15em}
 
 #settings-panel{position:absolute;inset:0;z-index:110;display:none;align-items:center;justify-content:center;background:rgba(var(--bg-overlay),.92);backdrop-filter:blur(12px)}
 #settings-panel.show{display:flex}
@@ -112,6 +114,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 .rstats .sv{font-family:'Orbitron',sans-serif;font-weight:700;font-size:1.1rem}
 .rbtns{display:flex;gap:1rem;justify-content:center}
 .de{color:var(--au)}.dn{color:var(--ad)}.dh{color:var(--ar)}.dx{color:var(--al)}.di{color:#ff00ff}
+#esc-hint{position:absolute;bottom:1rem;left:50%;transform:translateX(-50%);font-family:'Orbitron',sans-serif;font-size:.6rem;color:rgba(255,255,255,.38);letter-spacing:.2em;pointer-events:none;z-index:10}
 #mobile-warning{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;background:rgba(var(--bg-overlay),.97);backdrop-filter:blur(12px)}
 #mobile-warning.show{display:flex}
 .mobile-warn-card{max-width:340px}

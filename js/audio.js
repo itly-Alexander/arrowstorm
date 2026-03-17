@@ -222,7 +222,7 @@ async function startLiveAfterTutorial(diff) {
   // === ANALYSER — real-time onset detection (NOT connected to speakers) ===
   analyser = audioCtx.createAnalyser();
   analyser.fftSize = 4096;
-  analyser.smoothingTimeConstant = 0.15;
+  analyser.smoothingTimeConstant = 0.25;
   analyserLatency = analyser.fftSize / audioCtx.sampleRate / 2;
   src.connect(analyser);
 
