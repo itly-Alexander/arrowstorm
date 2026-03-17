@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#0a0a12;--bg-glow:#1a1a2e;--bg-overlay:10,10,18;--al:#ff2d55;--ad:#00e5ff;--au:#76ff03;--ar:#ffab00;--text:#e0e0e8;--dim:#6a6a7a}
+:root{--bg:#0a0a12;--bg-glow:#1a1a2e;--bg-overlay:10,10,18;--al:#ff2d55;--ad:#00e5ff;--au:#76ff03;--ar:#ffab00;--text:#f0f0f5;--dim:#6a6a7a}
 html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;overflow:hidden;user-select:none}
 
 #menu{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:radial-gradient(ellipse at 50% 30%,var(--bg-glow) 0%,var(--bg) 70%);position:relative;z-index:100}
@@ -112,3 +112,8 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 .rstats .sv{font-family:'Orbitron',sans-serif;font-weight:700;font-size:1.1rem}
 .rbtns{display:flex;gap:1rem;justify-content:center}
 .de{color:var(--au)}.dn{color:var(--ad)}.dh{color:var(--ar)}.dx{color:var(--al)}.di{color:#ff00ff}
+#mobile-warning{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;background:rgba(var(--bg-overlay),.97);backdrop-filter:blur(12px)}
+#mobile-warning.show{display:flex}
+.mobile-warn-card{max-width:340px}
+.mobile-warn-icon{font-size:2.8rem;margin:.5rem 0 1.5rem;opacity:.6}
+.mobile-warn-text{font-size:.9rem;color:var(--dim);line-height:1.8}

@@ -17,8 +17,8 @@ const ACOL = {
   up:{m:'#76ff03',g:'rgba(118,255,3,.6)'},right:{m:'#ffab00',g:'rgba(255,171,0,.6)'}
 };
 const JDG = {
-  perfect:{w:45,s:100,c:'#76ff03',t:'PERFECT'},great:{w:90,s:70,c:'#00e5ff',t:'GREAT'},
-  good:{w:135,s:40,c:'#ffab00',t:'GOOD'},miss:{w:180,s:0,c:'#ff2d55',t:'MISS'}
+  perfect:{w:55,s:100,c:'#76ff03',t:'PERFECT'},great:{w:108,s:70,c:'#00e5ff',t:'GREAT'},
+  good:{w:162,s:40,c:'#ffab00',t:'GOOD'},miss:{w:216,s:0,c:'#ff2d55',t:'MISS'}
 };
 
 const RY = 80, NSPD = 600, CW = 70, NS = 56;

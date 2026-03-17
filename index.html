@@ -226,6 +226,14 @@
   </div>
 </div>
 
+<div id="mobile-warning">
+  <div class="stg-card mobile-warn-card">
+    <h2>DESKTOP ONLY</h2>
+    <div class="mobile-warn-icon">⌨</div>
+    <p class="mobile-warn-text">ArrowStorm requires a keyboard or mouse and isn't optimized for mobile browsers.<br><br>Visit on a desktop or laptop computer to play.</p>
+  </div>
+</div>
+
 <script src="js/version.js"></script>
 <script src="js/config.js"></script>
 <script src="js/state.js"></script>
@@ -238,5 +246,10 @@
 <script src="js/easter.js"></script>
 <script src="js/input.js"></script>
 <script src="js/main.js"></script>
+<script>
+  if(window.matchMedia('(hover:none) and (pointer:coarse)').matches){
+    document.getElementById('mobile-warning').classList.add('show');
+  }
+</script>
 </body>
 </html>
