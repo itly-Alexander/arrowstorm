@@ -255,8 +255,8 @@
     document.getElementById('mobile-warning').classList.add('show');
   }
   (function(){
-    const ver = DESKTOP_VERSION + '.0';
-    const base = 'https://github.com/itly-Alexander/arrowstorm/releases/download/desktop-v' + DESKTOP_VERSION;
+    const ver = APP_VERSION + '.0';
+    const base = 'https://github.com/itly-Alexander/arrowstorm/releases/download/desktop-v' + APP_VERSION;
     const ua = navigator.userAgent;
     let file, label;
     if(/Win/.test(ua)){      file = 'ArrowStorm-Setup-' + ver + '.exe'; label = 'Download for Windows'; }
