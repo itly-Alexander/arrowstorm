@@ -94,7 +94,7 @@
   </div>
   <button class="btn settings-btn" onclick="openSettings()">Settings</button>
   <div class="version" id="ver"></div>
-  <a class="btn download-btn" id="dl-btn" href="#" title="Download Desktop App">⬇ Download</a>
+  <a class="btn download-btn" id="dl-btn" href="#" target="_blank" rel="noopener" title="Download Desktop App">⬇ Download</a>
 
   <div id="settings-panel">
     <div class="stg-card">
@@ -255,8 +255,8 @@
     document.getElementById('mobile-warning').classList.add('show');
   }
   (function(){
-    const ver = APP_VERSION + '.0';
-    const base = 'https://github.com/itly-Alexander/arrowstorm/releases/download/desktop-v' + APP_VERSION;
+    const ver = DESKTOP_VERSION + '.0';
+    const base = 'https://github.com/itly-Alexander/arrowstorm/releases/download/desktop-v' + DESKTOP_VERSION;
     const ua = navigator.userAgent;
     let file, label;
     if(/Win/.test(ua)){      file = 'ArrowStorm-Setup-' + ver + '.exe'; label = 'Download for Windows'; }
