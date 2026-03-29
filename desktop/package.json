@@ -2,6 +2,7 @@
   "name": "arrowstorm-desktop",
   "version": "0.17.0",
   "description": "ArrowStorm Desktop — rhythm game wrapper",
+  "repository": "https://github.com/itly-Alexander/arrowstorm",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
