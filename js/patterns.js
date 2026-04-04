@@ -108,6 +108,11 @@ function getStrikePos() {
 function spawnArrow(audioTime, band, onsetStrength) {
   const C = DIFF[curDiff];
 
+  if (gameMode === 'typing') {
+    spawnTypingNote(audioTime);
+    return;
+  }
+
   // Decide if this should be a chord based on onset strength and difficulty
   let arrowDirs;
   const isVeryStrong = onsetStrength > 2.5;
@@ -171,4 +176,38 @@ function spawnArrow(audioTime, band, onsetStrength) {
     }
     gNotes.push(note);
   }
+}
+
+// ═══════════════════════════════════════════
+//  TYPING MODE — spawn beat circle for next letter
+// ═══════════════════════════════════════════
+function spawnTypingNote(audioTime) {
+  // Pick a new word if needed
+  if (!typingWord || typingWordIdx >= typingWord.length) {
+    let word;
+    let attempts = 0;
+    do {
+      word = TYPING_WORDS[Math.floor(Math.random() * TYPING_WORDS.length)];
+      attempts++;
+    } while (word === typingWord && attempts < 10);
+    typingWord = word;
+    typingWordIdx = 0;
+    // Append all letters to the continuous queue
+    typingLetters += word;
+  }
+
+  typingWordIdx++;
+
+  const hitTime = audioTime + AUDIO_DELAY;
+  const colorIdx = Math.floor(Math.random() * 4);
+  const note = {
+    time: hitTime,
+    dir: colorIdx,
+    id: noteIdCounter++,
+    chordId: noteIdCounter,
+    hit: false,
+    missed: false,
+    y: 0
+  };
+  gNotes.push(note);
 }

@@ -20,6 +20,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 @keyframes badgePulse{0%,100%{opacity:1}50%{opacity:.6}}
 .mode-classic:hover{border-color:var(--au);background:rgba(118,255,3,.06)}
 .mode-strike:hover{border-color:var(--al);background:rgba(255,45,85,.06)}
+.mode-typing:hover{border-color:var(--ad);background:rgba(0,229,255,.06)}
 .back-btn{margin-top:1rem;font-size:.7rem;padding:.5rem 1.5rem;border-color:rgba(255,255,255,.15)}
 .info{color:var(--dim);font-size:.8rem;text-align:center;max-width:520px;line-height:1.6;margin-top:1.5rem}
 .settings-btn{margin-top:1.5rem;font-size:.75rem;padding:.5rem 1.4rem}
@@ -59,6 +60,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 #game{display:none;width:100%;height:100vh;position:relative;background:var(--bg);overflow:hidden}
 #gc{position:absolute;top:0;left:0;width:100%;height:100%}
 .hud{position:absolute;top:0;left:50%;transform:translateX(-50%);width:500px;display:flex;justify-content:space-between;align-items:flex-start;padding:.8rem 0;pointer-events:none;z-index:10}
+.hud.hud-bottom{top:auto;bottom:0;align-items:flex-end;padding-bottom:.8rem}
 .hud-l{display:flex;flex-direction:column;align-items:flex-start;padding-right:1rem}
 .hud-r{display:flex;flex-direction:column;align-items:flex-end;padding-left:1rem}
 #hs{font-family:'Orbitron',sans-serif;font-size:1.6rem;font-weight:900}

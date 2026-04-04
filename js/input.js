@@ -42,6 +42,16 @@ document.addEventListener('keydown', e => {
     return;
   }
 
+  // Typing mode: any letter key triggers a hit
+  if (gameMode === 'typing' && gActive) {
+    const letter = e.key.toUpperCase();
+    if (letter.length === 1 && letter >= 'A' && letter <= 'Z') {
+      e.preventDefault();
+      hitTypingNote(letter);
+      return;
+    }
+  }
+
   const d = KM[e.key];
   if (d !== undefined && gActive) {
     e.preventDefault();

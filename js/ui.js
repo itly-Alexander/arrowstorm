@@ -35,8 +35,9 @@ function showDiffSelect(mode) {
   gameMode = mode;
   document.getElementById('mode-select').style.display = 'none';
   document.getElementById('diff-select').style.display = 'flex';
+  const modeLabels = { classic: 'CLASSIC', strike: 'STRIKE', typing: 'TYPING' };
   document.getElementById('diff-title').textContent =
-    mode === 'strike' ? 'STRIKE \u2014 Select Difficulty' : 'CLASSIC \u2014 Select Difficulty';
+    (modeLabels[mode] || 'CLASSIC') + ' \u2014 Select Difficulty';
 
   const info = document.getElementById('game-info');
   if (mode === 'strike') {
@@ -44,6 +45,11 @@ function showDiffSelect(mode) {
       'Click circles synced to the beat \u2014 share a browser tab playing music.<br>' +
       'Move your mouse and click (or press Z/X) when the approach ring shrinks to the circle.<br><br>' +
       'Mouse / <kbd>Z</kbd><kbd>X</kbd> to hit &nbsp;|&nbsp; <kbd>Esc</kbd> quit';
+  } else if (mode === 'typing') {
+    info.innerHTML =
+      'Type letters synced to the beat \u2014 share a browser tab playing music.<br>' +
+      'Random letters fall down. Press the matching key when it reaches the receptor line.<br><br>' +
+      '<kbd>A</kbd>-<kbd>Z</kbd> to hit &nbsp;|&nbsp; <kbd>Esc</kbd> quit';
   } else {
     info.innerHTML =
       'Hit arrows synced to the beat \u2014 share a browser tab playing music.<br>' +
@@ -83,7 +89,7 @@ function showResults() {
   document.getElementById('game').style.display = 'none';
   document.getElementById('results').style.display = 'flex';
 
-  const modeLabel = gameMode === 'strike' ? 'Strike' : 'Classic';
+  const modeLabel = gameMode === 'strike' ? 'Strike' : gameMode === 'typing' ? 'Typing' : 'Classic';
   document.getElementById('rsn').textContent = modeLabel + ' \u2014 ' + DIFF[curDiff].label;
   document.getElementById('rsc').textContent = gScore.toLocaleString();
   document.getElementById('rp').textContent = gJdg.perfect;

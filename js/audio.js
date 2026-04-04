@@ -7,11 +7,16 @@ let beatHigh = 0;      // high energy 0-1
 let beatPulse = 0;     // decaying pulse triggered on strong beats
 let prevBeatEnergy = 0;
 
+let _vizBuf = null; // reusable buffer for beat visuals
+
 function sampleBeatVisuals() {
   if (!vizAnalyser) { beatEnergy = 0; beatBass = 0; beatHigh = 0; return; }
 
-  const fd = new Uint8Array(vizAnalyser.frequencyBinCount);
-  vizAnalyser.getByteFrequencyData(fd);
+  if (!_vizBuf || _vizBuf.length !== vizAnalyser.frequencyBinCount) {
+    _vizBuf = new Uint8Array(vizAnalyser.frequencyBinCount);
+  }
+  vizAnalyser.getByteFrequencyData(_vizBuf);
+  const fd = _vizBuf;
 
   const bins = fd.length;
   // Bass: first 10% of bins, High: 30-60% of bins
@@ -45,13 +50,17 @@ function sampleBeatVisuals() {
 //  Only sharp attacks (drums, plucks, hits) trigger arrows.
 // ═══════════════════════════════════════════
 let recentFluxes = []; // short ring buffer for transient detection
+let _onsetBuf = null;  // reusable buffer for onset detection
 
 function detectOnsets() {
   if (!analyser || !audioCtx) return;
 
   const C = DIFF[curDiff];
-  const fd = new Float32Array(analyser.frequencyBinCount);
-  analyser.getFloatFrequencyData(fd);
+  if (!_onsetBuf || _onsetBuf.length !== analyser.frequencyBinCount) {
+    _onsetBuf = new Float32Array(analyser.frequencyBinCount);
+  }
+  analyser.getFloatFrequencyData(_onsetBuf);
+  const fd = _onsetBuf;
 
   const now = audioCtx.currentTime - liveRecordStart - analyserLatency;
   if (now < 0) return;
@@ -105,8 +114,10 @@ function detectOnsets() {
     isTransient = transientRatio > effTransientTh;
   }
 
+  // Cap energy history to prevent unbounded growth
+  if (liveEnergyData.length > 120) liveEnergyData.splice(0, liveEnergyData.length - 80);
+
   if (!isTransient) {
-    // Not a transient — store energy data but don't spawn any arrow
     liveEnergyData.push({ time: now, flux, bassFlux, midFlux, highFlux });
     runningEnergyAvg = runningEnergyAvg * 0.97 + flux * 0.03;
     return;
@@ -125,7 +136,11 @@ function detectOnsets() {
   const energyRatio = runningEnergyAvg > 0.0001 ? Math.min(3, flux / runningEnergyAvg) : 1;
   // Strike mode needs much wider gaps — mouse travel between circles takes real time
   const strikeGapFloor = { easy: 0.9, normal: 0.7, hard: 0.55, extreme: 0.45, impossible: 0.35 };
-  const baseGap = gameMode === 'strike' ? Math.max(C.minGap, strikeGapFloor[curDiff] || 0.7) : C.minGap;
+  // Typing mode needs wider gaps — scanning 26 keys is harder than 4 arrow keys
+  const typingGapFloor = { easy: 1.0, normal: 0.75, hard: 0.55, extreme: 0.40, impossible: 0.28 };
+  const baseGap = gameMode === 'strike' ? Math.max(C.minGap, strikeGapFloor[curDiff] || 0.7)
+               : gameMode === 'typing' ? Math.max(C.minGap, typingGapFloor[curDiff] || 0.50)
+               : C.minGap;
   const dynamicGap = baseGap * (1 - C.energyScale * Math.min(1, (energyRatio - 1) / 2));
   const effectiveGap = Math.max(0.04, dynamicGap);
 
@@ -168,6 +183,7 @@ function cleanup() {
   if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
   if (audioCtx) audioCtx.close().catch(() => {});
   mediaStream = null; audioCtx = null; analyser = null;
+  _onsetBuf = null; _vizBuf = null;
   if (gCanvas) gCanvas.style.cursor = '';
 }
 
@@ -244,6 +260,8 @@ async function startLiveAfterTutorial(diff) {
   liveRecordStart = audioCtx.currentTime;
   lastOnsetTime = -Infinity;
   prevDir = -1; ppDir = -1;
+  typingWord = ''; typingWordIdx = 0;
+  typingLetters = ''; typingLettersPos = 0; typingScrollX = 0;
   noteIdCounter = 0;
   streamEnded = false;
   runningEnergyAvg = 0;
@@ -280,6 +298,10 @@ async function startLiveAfterTutorial(diff) {
   // Hide system cursor in strike mode (custom cursor drawn on canvas)
   gCanvas.style.cursor = gameMode === 'strike' ? 'none' : '';
 
+  // Move HUD to bottom in typing mode so word display has room at top
+  document.querySelector('.hud').classList.toggle('hud-bottom', gameMode === 'typing');
+
+  cacheHudElements();
   gActive = true;
   gStart = performance.now();
   gRAF = requestAnimationFrame(gameLoop);

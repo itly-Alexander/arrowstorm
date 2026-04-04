@@ -9,7 +9,7 @@ let gRAF, gCanvas, gCtx;
 let rFlash = {left:0,down:0,up:0,right:0};
 let jTimer = 0;
 let curDiff = 'normal';
-let gameMode = 'classic'; // 'classic' | 'strike'
+let gameMode = 'classic'; // 'classic' | 'strike' | 'typing'
 
 // Strike mode state
 let sCursorX = 0, sCursorY = 0; // mouse position
@@ -22,6 +22,11 @@ let liveRecordStart = 0;
 let prevSpec = null;
 let lastOnsetTime = -Infinity;
 let prevDir = -1, ppDir = -1;
+let typingWord = '';         // current word being spawned letter by letter
+let typingWordIdx = 0;       // index of next letter to spawn
+let typingLetters = '';      // concatenated letters from all spawned words
+let typingLettersPos = 0;    // how many letters the player has typed
+let typingScrollX = 0;       // smooth scroll offset (pixels)
 let noteIdCounter = 0;
 let analyserLatency = 0;
 let liveEnergyData = [];

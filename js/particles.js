@@ -28,12 +28,17 @@ function spawnPerfectEffect(x, y, color, intense) {
 }
 
 function updateAndDrawParticles(ctx) {
-  // Expanding rings
-  for (let i = perfectRings.length - 1; i >= 0; i--) {
-    const r = perfectRings[i];
+  // Expanding rings — swap-and-pop removal
+  let ri = 0;
+  while (ri < perfectRings.length) {
+    const r = perfectRings[ri];
     r.radius += (r.maxRadius - r.radius) * 0.1;
     r.life *= 0.9;
-    if (r.life < 0.02) { perfectRings.splice(i, 1); continue; }
+    if (r.life < 0.02) {
+      perfectRings[ri] = perfectRings[perfectRings.length - 1];
+      perfectRings.pop();
+      continue;
+    }
     ctx.save();
     ctx.globalAlpha = r.life * 0.4;
     ctx.strokeStyle = r.color;
@@ -44,19 +49,24 @@ function updateAndDrawParticles(ctx) {
     ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
+    ri++;
   }
 
-  // Particles
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i];
+  // Particles — swap-and-pop removal, batched draw state
+  ctx.save();
+  let pi = 0;
+  while (pi < particles.length) {
+    const p = particles[pi];
     p.x += p.vx * 0.016;
     p.y += p.vy * 0.016;
-    p.vy += 150 * 0.016; // gravity
+    p.vy += 2.4; // 150 * 0.016 pre-computed
     p.vx *= 0.98;
     p.life -= p.decay;
-    if (p.life <= 0) { particles.splice(i, 1); continue; }
-
-    ctx.save();
+    if (p.life <= 0) {
+      particles[pi] = particles[particles.length - 1];
+      particles.pop();
+      continue;
+    }
     ctx.globalAlpha = p.life * 0.8;
     ctx.shadowBlur = 6;
     ctx.shadowColor = p.color;
@@ -64,6 +74,7 @@ function updateAndDrawParticles(ctx) {
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
+    pi++;
   }
+  ctx.restore();
 }
