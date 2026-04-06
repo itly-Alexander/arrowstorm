@@ -60,13 +60,73 @@ const PATTERNS = {
     if (band === 'bass') return [0,0,1,1,0,1,3,2][Math.floor(Math.random()*8)];
     if (band === 'high') return [2,3,2,3,3,2,0,1][Math.floor(Math.random()*8)];
     return Math.floor(Math.random() * 4);
+  },
+  // Staircase: climb up then hold the top before descending
+  staircase(band) {
+    if (!patternData) patternData = { pos: 0, dir: 1 };
+    const d = patternData.pos;
+    if (patternData.pos === 3 && patternData.dir === 1) patternData.dir = -1;
+    else if (patternData.pos === 0 && patternData.dir === -1) patternData.dir = 1;
+    patternData.pos += patternData.dir;
+    return d;
+  },
+  // Gallop: repeating triplet feel — same, same, different
+  gallop(band) {
+    if (!patternData) patternData = { base: Math.floor(Math.random()*4), count: 0 };
+    if (patternData.count < 2) {
+      patternData.count++;
+      return patternData.base;
+    }
+    patternData.count = 0;
+    const others = [0,1,2,3].filter(x => x !== patternData.base);
+    patternData.base = others[Math.floor(Math.random()*others.length)];
+    return others[Math.floor(Math.random()*others.length)];
+  },
+  // Spiral: cycle through all 4 directions in order then shift start
+  spiral(band) {
+    if (!patternData) patternData = { offset: Math.floor(Math.random()*4), idx: 0 };
+    const d = (patternData.offset + patternData.idx) % 4;
+    patternData.idx++;
+    if (patternData.idx >= 4) { patternData.idx = 0; patternData.offset = (patternData.offset + 1) % 4; }
+    return d;
+  },
+  // Flutter: rapid cluster around one direction with occasional escapes
+  flutter(band) {
+    if (!patternData) patternData = { center: Math.floor(Math.random()*4) };
+    if (Math.random() < 0.7) return patternData.center;
+    const adj = [patternData.center - 1, patternData.center + 1].filter(x => x >= 0 && x <= 3);
+    return adj[Math.floor(Math.random()*adj.length)];
+  },
+  // Cascade: waterfall — 0,1,2,3 repeating, then pick a new starting column
+  cascade(band) {
+    if (!patternData) patternData = { start: Math.floor(Math.random()*4), idx: 0 };
+    const d = (patternData.start + patternData.idx) % 4;
+    patternData.idx++;
+    if (patternData.idx >= 4) { patternData.start = Math.floor(Math.random()*4); patternData.idx = 0; }
+    return d;
+  },
+  // Pendulum: swing with decreasing amplitude from edge to center
+  pendulum(band) {
+    if (!patternData) patternData = { seq: [0,3,1,2,1,3,0,2], idx: 0 };
+    const d = patternData.seq[patternData.idx % patternData.seq.length];
+    patternData.idx++;
+    return d;
+  },
+  // Shuffle: random permutation of all 4 directions, then reshuffle
+  shuffle(band) {
+    if (!patternData || patternData.idx >= patternData.seq.length) {
+      const arr = [0,1,2,3];
+      for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [arr[i],arr[j]] = [arr[j],arr[i]]; }
+      patternData = { seq: arr, idx: 0 };
+    }
+    return patternData.seq[patternData.idx++];
   }
 };
 
 function pickNewPattern() {
   const types = Object.keys(PATTERNS);
   // Weight toward more interesting patterns, less toward pure random
-  const weights = { random: 1, zigzag: 3, trill: 2, sweep: 2, jump: 3, mirror: 3, bandBias: 2 };
+  const weights = { random: 1, zigzag: 3, trill: 2, sweep: 2, jump: 3, mirror: 3, bandBias: 2, staircase: 2, gallop: 3, spiral: 2, flutter: 2, cascade: 2, pendulum: 2, shuffle: 3 };
   const pool = [];
   for (const t of types) { for (let i = 0; i < (weights[t]||1); i++) pool.push(t); }
   // Don't repeat the same pattern twice in a row
@@ -116,7 +176,7 @@ function spawnArrow(audioTime, band, onsetStrength) {
   // Decide if this should be a chord based on onset strength and difficulty
   let arrowDirs;
   const isVeryStrong = onsetStrength > 2.5;
-  const isStrong = onsetStrength > 1.8;
+  const isStrong = onsetStrength > 1.5;
 
   if (gameMode !== 'strike' && isVeryStrong && Math.random() < C.tripleChance) {
     arrowDirs = CHORDS_3[Math.floor(Math.random() * CHORDS_3.length)];

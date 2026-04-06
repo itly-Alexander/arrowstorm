@@ -22,6 +22,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 .mode-strike:hover{border-color:var(--al);background:rgba(255,45,85,.06)}
 .mode-typing:hover{border-color:var(--ad);background:rgba(0,229,255,.06)}
 .back-btn{margin-top:1rem;font-size:.7rem;padding:.5rem 1.5rem;border-color:rgba(255,255,255,.15)}
+.epilepsy-notice{color:var(--warn,rgba(255,200,100,.6));font-size:.7rem;text-align:center;max-width:420px;margin:1.2rem auto 0;line-height:1.5;letter-spacing:.02em}
 .info{color:var(--dim);font-size:.8rem;text-align:center;max-width:520px;line-height:1.6;margin-top:1.5rem}
 .settings-btn{margin-top:1.5rem;font-size:.75rem;padding:.5rem 1.4rem}
 .version{position:absolute;bottom:1rem;left:50%;transform:translateX(-50%);font-family:'Orbitron',sans-serif;font-size:.65rem;color:rgba(180,180,195,.55);letter-spacing:.15em}

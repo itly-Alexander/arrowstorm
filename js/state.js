@@ -18,6 +18,7 @@ let sLastX = 0, sLastY = 0;     // last spawned circle position
 // Live audio state
 let mediaStream, audioCtx, analyser, scriptNode, delayNode;
 let vizAnalyser = null; // second analyser on the DELAYED audio — drives visual beat effects
+let bassAnalyser = null; // third analyser — low smoothing for punchy bass hit detection
 let liveRecordStart = 0;
 let prevSpec = null;
 let lastOnsetTime = -Infinity;

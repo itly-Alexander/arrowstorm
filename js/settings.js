@@ -9,6 +9,11 @@ const BG_THEMES = {
     bg:      '#0a0a12',       // body/game background
     glow:    '#1a1a2e',       // radial gradient center (menu/results)
     overlay: '10,10,18',      // overlay RGB for dialogs
+    warn:    'rgba(255,190,80,.55)', // epilepsy notice — warm amber on cool blue
+    // EQ bar color ramp [bass, mids, highs] as RGB arrays
+    eqLow: [80, 50, 180],    // deep indigo
+    eqMid: [40, 120, 220],   // bright blue
+    eqHigh: [120, 180, 255], // light sky
     // In-game canvas beat-reactive colors
     base:  [10, 10, 18],
     mid:   [13, 13, 24],
@@ -22,6 +27,10 @@ const BG_THEMES = {
     bg:      '#120a0a',
     glow:    '#2e1a1a',
     overlay: '18,10,10',
+    warn:    'rgba(100,200,255,.55)', // cool cyan on warm red
+    eqLow: [180, 40, 40],
+    eqMid: [220, 80, 50],
+    eqHigh: [255, 150, 100],
     base:  [18, 10, 10],
     mid:   [24, 13, 15],
     bassShift: [30, 0, 0],
@@ -34,6 +43,10 @@ const BG_THEMES = {
     bg:      '#0a120c',
     glow:    '#1a2e1e',
     overlay: '10,18,12',
+    warn:    'rgba(255,170,130,.55)', // warm peach on cool green
+    eqLow: [30, 140, 60],
+    eqMid: [60, 190, 100],
+    eqHigh: [140, 230, 170],
     base:  [10, 18, 12],
     mid:   [13, 24, 15],
     bassShift: [0, 30, 5],
@@ -84,6 +97,7 @@ function applyThemeCSS() {
   root.setProperty('--bg', theme.bg);
   root.setProperty('--bg-glow', theme.glow);
   root.setProperty('--bg-overlay', theme.overlay);
+  root.setProperty('--warn', theme.warn || 'rgba(255,200,100,.55)');
 }
 
 function rebuildKeyMap() {

@@ -109,6 +109,7 @@ function startAmbientArrows(sneakIn) {
 
 function stopAmbientArrows() {
   ambientRunning = false;
+  despawnPlayerArrow();
   if (ambientAnimId) {
     cancelAnimationFrame(ambientAnimId);
     ambientAnimId = null;
@@ -166,6 +167,28 @@ function ambientFrame(now) {
     bud.squashX = 0.7; bud.squashY = 1.3;
     a.bumpCooldown = 0.8;
     bud.bumpCooldown = 0.8;
+  }
+
+  // Player arrow vs buddy collision
+  if (playerArrow) {
+    for (const buddy of buddies) {
+      if (buddy.state === 'sneakIn') continue;
+      const pdx = playerArrow.x - buddy.x;
+      const pdy = playerArrow.y - buddy.y;
+      const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
+      if (pdist < 50 && pdist > 1 && buddy.bumpCooldown <= 0) {
+        const nx = pdx / pdist, ny = pdy / pdist;
+        const bumpForce = 220;
+        // Bounce player
+        playerArrow.vx += nx * bumpForce;
+        playerArrow.vy += ny * bumpForce;
+        // Bounce buddy
+        buddy.vx -= nx * bumpForce;
+        buddy.vy -= ny * bumpForce;
+        buddy.squashX = 0.7; buddy.squashY = 1.3;
+        buddy.bumpCooldown = 0.5;
+      }
+    }
   }
 
   // Physics per buddy
@@ -384,6 +407,10 @@ function ambientFrame(now) {
     );
   }
 
+  // Player-controlled arrow
+  updatePlayerArrow(dt);
+  drawPlayerArrow(ambientCtx);
+
   ambientAnimId = requestAnimationFrame(ambientFrame);
 }
 
@@ -475,8 +502,12 @@ function launchArrowStorm() {
   ctx.scale(devicePixelRatio, devicePixelRatio);
   const W = innerWidth, H = innerHeight;
 
-  // Stop ambient loop — storm takes over the canvas
+  // Stop ambient loop — storm takes over the canvas (preserve player arrow)
+  const savedPlayer = playerArrow;
+  const savedKeys = { ...playerKeys };
   stopAmbientArrows();
+  playerArrow = savedPlayer;
+  playerKeys = savedKeys;
 
   const colors = ['#ff2d55', '#00e5ff', '#76ff03', '#ffab00'];
   const dirNames = ['left', 'down', 'up', 'right'];
@@ -580,6 +611,10 @@ function launchArrowStorm() {
       }
     }
 
+    // Keep player arrow alive during storm
+    updatePlayerArrow(dt);
+    drawPlayerArrow(ctx);
+
     if (allGone) {
       ctx.clearRect(0, 0, W, H);
       eggActive = false;
@@ -592,6 +627,95 @@ function launchArrowStorm() {
   }
 
   requestAnimationFrame(frame);
+}
+
+// ═══════════════════════════════════════════
+//  PLAYER ARROW — fly around the menu with arrow keys / DFJK
+// ═══════════════════════════════════════════
+let playerArrow = null;
+let playerKeys = { left: false, down: false, up: false, right: false };
+
+function spawnPlayerArrow() {
+  if (playerArrow) return;
+  playerArrow = {
+    x: innerWidth / 2,
+    y: innerHeight / 2,
+    vx: 0, vy: 0,
+    angle: 0,
+    size: 42,
+    trail: [] // recent positions for a fading trail
+  };
+}
+
+function updatePlayerArrow(dt) {
+  if (!playerArrow) return;
+  const p = playerArrow;
+  const thrust = 1200;
+  let ax = 0, ay = 0;
+
+  if (playerKeys.left)  ax -= thrust;
+  if (playerKeys.right) ax += thrust;
+  if (playerKeys.up)    ay -= thrust;
+  if (playerKeys.down)  ay += thrust;
+
+  // Apply thrust + friction
+  p.vx += ax * dt;
+  p.vy += ay * dt;
+  const friction = (ax !== 0 || ay !== 0) ? 0.02 : 0.001; // light drag while thrusting, heavy when idle
+  p.vx *= Math.pow(friction, dt);
+  p.vy *= Math.pow(friction, dt);
+
+  // Clamp speed
+  const spd = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+  const maxSpd = 600;
+  if (spd > maxSpd) { p.vx *= maxSpd / spd; p.vy *= maxSpd / spd; }
+
+  p.x += p.vx * dt;
+  p.y += p.vy * dt;
+
+  // Wrap around screen edges
+  const W = innerWidth, H = innerHeight;
+  const m = 30;
+  if (p.x < -m) p.x = W + m;
+  if (p.x > W + m) p.x = -m;
+  if (p.y < -m) p.y = H + m;
+  if (p.y > H + m) p.y = -m;
+
+  // Rotate toward velocity
+  if (spd > 15) {
+    const target = Math.atan2(p.vy, p.vx);
+    let diff = target - p.angle;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    p.angle += diff * Math.min(1, dt * 12);
+  }
+
+  // Trail
+  p.trail.push({ x: p.x, y: p.y, a: 0.5 });
+  if (p.trail.length > 12) p.trail.shift();
+}
+
+function drawPlayerArrow(ctx) {
+  if (!playerArrow) return;
+  const p = playerArrow;
+
+  // Draw trail
+  for (let i = 0; i < p.trail.length; i++) {
+    const t = p.trail[i];
+    const frac = i / p.trail.length;
+    const sz = p.size * (0.3 + frac * 0.5);
+    drawBuddyArrow(ctx, t.x, t.y, p.angle, sz, '#76ff03', frac * 0.15, 1, 1);
+  }
+
+  // Draw main arrow
+  const spd = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+  const stretch = Math.min(spd / 500, 0.2);
+  drawBuddyArrow(ctx, p.x, p.y, p.angle, p.size, '#76ff03', 0.85, 1 + stretch, 1 - stretch * 0.4);
+}
+
+function despawnPlayerArrow() {
+  playerArrow = null;
+  playerKeys = { left: false, down: false, up: false, right: false };
 }
 
 // ── Start ambient arrows when menu is shown ──

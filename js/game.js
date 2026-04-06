@@ -112,6 +112,9 @@ function gameLoop() {
     lg.addColorStop(1, 'transparent');
     ctx.fillStyle = lg; ctx.fillRect(lx, 0, lw, H);
 
+    // Bass-reactive side animations
+    drawBassLanePulse(ctx, lx, lw, W, H);
+
     if (gCombo > 10) {
       ctx.fillStyle = `rgba(118,255,3,${Math.min(.15, gCombo / 500)})`;
       ctx.fillRect(lx, 0, lw, H);
@@ -128,6 +131,9 @@ function gameLoop() {
     lg.addColorStop(.9,`rgba(255,255,255,${laneAlpha})`);
     lg.addColorStop(1,'transparent');
     ctx.fillStyle = lg; ctx.fillRect(lx,0,lw,H);
+
+    // Bass-reactive side animations
+    drawBassLanePulse(ctx, lx, lw, W, H);
 
     // Combo glow (classic)
     if (gCombo > 10) {
@@ -161,6 +167,103 @@ function gameLoop() {
   if (gCombo > 0) {
     _hudCombo.style.textShadow = `0 0 ${8 + beatPulse * 20}px currentColor`;
   }
+}
+
+// ═══════════════════════════════════════════
+//  EQ VISUALIZER — frequency bars on lane sides
+// ═══════════════════════════════════════════
+
+// Color cache — rebuilt when theme changes
+let _eqColorsRgb = null;
+let _eqThemeKey = '';
+
+function buildEqColors() {
+  const theme = getBgTheme();
+  const key = theme.bg;
+  if (_eqThemeKey === key && _eqColorsRgb) return;
+  _eqThemeKey = key;
+  const lo = theme.eqLow  || [80,50,180];
+  const md = theme.eqMid  || [40,120,220];
+  const hi = theme.eqHigh || [120,180,255];
+  _eqColorsRgb = [];
+  for (let i = 0; i < EQ_BAND_COUNT; i++) {
+    const t = i / (EQ_BAND_COUNT - 1);
+    let r, g, b;
+    if (t < 0.5) {
+      const s = t * 2; // 0-1 within low→mid
+      r = lo[0] + (md[0] - lo[0]) * s;
+      g = lo[1] + (md[1] - lo[1]) * s;
+      b = lo[2] + (md[2] - lo[2]) * s;
+    } else {
+      const s = (t - 0.5) * 2; // 0-1 within mid→high
+      r = md[0] + (hi[0] - md[0]) * s;
+      g = md[1] + (hi[1] - md[1]) * s;
+      b = md[2] + (hi[2] - md[2]) * s;
+    }
+    _eqColorsRgb.push(`${Math.round(r)},${Math.round(g)},${Math.round(b)}`);
+  }
+}
+
+function drawBassLanePulse(ctx, lx, lw, W, H) {
+  if (!bassAnalyser) return;
+  buildEqColors();
+
+  const sideSpace = Math.min(180, (W - lw) / 2 - 8);
+
+  // Combo growth: only starts after green lane (combo > 10), maxes at 50
+  const comboT = gCombo > 10 ? Math.min(1, (gCombo - 10) / 40) : 0;
+  const comboMul = 1 + comboT * 0.75;
+  const alphaBoost = 1 + comboT * 0.4;
+
+  const maxBarLen = sideSpace * comboMul;
+  const rx0 = lx + lw;
+  const n = EQ_BAND_COUNT;
+  const gap = 3;
+  // Bars stacked vertically — bass at bottom, highs at top
+  const totalH = H * 0.55; // use middle 55% of screen height
+  const barH = Math.max(2, (totalH - gap * (n - 1)) / n);
+  const topY = (H - totalH) / 2; // vertically centered
+  const radius = Math.min(barH * 0.4, 4); // rounded cap radius
+
+  ctx.save();
+  for (let i = 0; i < n; i++) {
+    const level = eqBands[i];
+    if (level < 0.01) continue;
+
+    const barLen = maxBarLen * level;
+    // Band index: 0 = bass (bottom), n-1 = highs (top)
+    const y = topY + (n - 1 - i) * (barH + gap);
+    const a = Math.min(0.45, (0.15 + level * 0.3) * alphaBoost);
+    const col = _eqColorsRgb[i];
+
+    ctx.globalAlpha = a;
+
+    // Left side — extends left from lane edge
+    ctx.fillStyle = `rgb(${col})`;
+    if (radius > 1 && barLen > radius * 2) {
+      ctx.beginPath();
+      ctx.roundRect(lx - barLen, y, barLen, barH, [radius, 0, 0, radius]);
+      ctx.fill();
+    } else {
+      ctx.fillRect(lx - barLen, y, barLen, barH);
+    }
+
+    // Right side — extends right from lane edge (mirrored)
+    if (radius > 1 && barLen > radius * 2) {
+      ctx.beginPath();
+      ctx.roundRect(rx0, y, barLen, barH, [0, radius, radius, 0]);
+      ctx.fill();
+    } else {
+      ctx.fillRect(rx0, y, barLen, barH);
+    }
+
+    // Inner highlight strip — thin bright line at lane edge for definition
+    ctx.globalAlpha = a * 0.6;
+    ctx.fillStyle = `rgba(${col},0.5)`;
+    ctx.fillRect(lx - 2, y, 2, barH);
+    ctx.fillRect(rx0, y, 2, barH);
+  }
+  ctx.restore();
 }
 
 // ═══════════════════════════════════════════

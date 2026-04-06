@@ -5,7 +5,14 @@ let beatEnergy = 0;    // overall energy 0-1
 let beatBass = 0;      // bass energy 0-1
 let beatHigh = 0;      // high energy 0-1
 let beatPulse = 0;     // decaying pulse triggered on strong beats
+let beatBassHit = 0;   // fast-attack fast-decay bass — spikes on each kick
+let _bassBuf = null;   // reusable buffer for bass analyser
 let prevBeatEnergy = 0;
+
+// EQ band levels for visualizer bars (0-1 each), driven by bassAnalyser (low smoothing)
+const EQ_BAND_COUNT = 20;
+const eqBands = new Float32Array(EQ_BAND_COUNT);     // current smoothed levels
+const _eqPeaks = new Float32Array(EQ_BAND_COUNT);    // peak-hold for snappy attack
 
 let _vizBuf = null; // reusable buffer for beat visuals
 
@@ -35,12 +42,50 @@ function sampleBeatVisuals() {
   beatBass = Math.min(1, (bassSum / Math.max(1, bassEnd)) / 180);
   beatHigh = Math.min(1, (highSum / Math.max(1, highEnd - highStart)) / 150);
 
+  // Fast bass tracker + EQ bands — read from dedicated low-smoothing analyser
+  if (bassAnalyser) {
+    if (!_bassBuf || _bassBuf.length !== bassAnalyser.frequencyBinCount) {
+      _bassBuf = new Uint8Array(bassAnalyser.frequencyBinCount);
+    }
+    bassAnalyser.getByteFrequencyData(_bassBuf);
+    const bBins = _bassBuf.length;
+
+    // Bass hit tracking (first 10% of bins)
+    const bassBins = Math.floor(bBins * 0.1);
+    let rawSum = 0;
+    for (let i = 0; i < bassBins; i++) rawSum += _bassBuf[i];
+    const rawBass = Math.min(1, (rawSum / Math.max(1, bassBins)) / 110);
+    if (rawBass > beatBassHit) {
+      beatBassHit = rawBass;
+    } else {
+      beatBassHit *= 0.92;
+    }
+
+    // EQ bands — logarithmic frequency distribution across 20 bands
+    // Maps bins to bands so low frequencies get more bands (perceptually correct)
+    for (let b = 0; b < EQ_BAND_COUNT; b++) {
+      const f0 = Math.floor(bBins * Math.pow(b / EQ_BAND_COUNT, 1.8));
+      const f1 = Math.max(f0 + 1, Math.floor(bBins * Math.pow((b + 1) / EQ_BAND_COUNT, 1.8)));
+      let sum = 0;
+      for (let i = f0; i < f1 && i < bBins; i++) sum += _bassBuf[i];
+      const level = Math.min(1, (sum / Math.max(1, f1 - f0)) / 180);
+      // Instant attack, smooth decay
+      if (level > _eqPeaks[b]) {
+        _eqPeaks[b] = level;
+      } else {
+        _eqPeaks[b] *= 0.88;
+      }
+      // Blend peak (punchy) with current level (smooth) for best visual
+      eqBands[b] = _eqPeaks[b] * 0.7 + level * 0.3;
+    }
+  }
+
   // Detect beats: sharp rise in bass energy
   const delta = beatBass - prevBeatEnergy;
-  if (delta > 0.15) {
-    beatPulse = Math.min(1, beatPulse + delta * 2);
+  if (delta > 0.08) {
+    beatPulse = Math.min(1, beatPulse + delta * 2.5);
   }
-  beatPulse *= 0.92; // decay
+  beatPulse *= 0.88; // decay
   prevBeatEnergy = beatBass;
 }
 
@@ -51,6 +96,11 @@ function sampleBeatVisuals() {
 // ═══════════════════════════════════════════
 let recentFluxes = []; // short ring buffer for transient detection
 let _onsetBuf = null;  // reusable buffer for onset detection
+
+// Precomputed dB-to-linear table: Math.pow(10, dB/20) for dB in [-128..0]
+// Avoids Math.pow in the hot onset loop (~740 calls/frame)
+const _dbToLin = new Float32Array(256);
+for (let i = 0; i < 256; i++) _dbToLin[i] = Math.pow(10, (i - 128) / 20);
 
 function detectOnsets() {
   if (!analyser || !audioCtx) return;
@@ -76,7 +126,8 @@ function detectOnsets() {
   // Spectral flux (half-wave rectified)
   let flux = 0, bassFlux = 0, midFlux = 0, highFlux = 0;
   for (let i = 0; i < topEnd; i++) {
-    const lin = Math.pow(10, fd[i] / 20);
+    const dbi = (fd[i] + 128) | 0; // fd[i] is float dB in ~[-128,0], shift to [0,255]
+    const lin = _dbToLin[dbi < 0 ? 0 : dbi > 255 ? 255 : dbi];
     const diff = lin - prevSpec[i];
     if (diff > 0) {
       flux += diff;
@@ -180,6 +231,7 @@ function detectOnsets() {
 function cleanup() {
   if (delayNode) { delayNode.disconnect(); delayNode = null; }
   if (vizAnalyser) { vizAnalyser.disconnect(); vizAnalyser = null; }
+  if (bassAnalyser) { bassAnalyser.disconnect(); bassAnalyser = null; }
   if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
   if (audioCtx) audioCtx.close().catch(() => {});
   mediaStream = null; audioCtx = null; analyser = null;
@@ -253,6 +305,12 @@ async function startLiveAfterTutorial(diff) {
   vizAnalyser.fftSize = 512; // small FFT = fast, we just need energy levels
   vizAnalyser.smoothingTimeConstant = 0.7; // smooth for visuals
   delayNode.connect(vizAnalyser);
+
+  // === BASS ANALYSER — near-zero smoothing for sharp transient detection ===
+  bassAnalyser = audioCtx.createAnalyser();
+  bassAnalyser.fftSize = 512;
+  bassAnalyser.smoothingTimeConstant = 0.05; // almost raw — preserves transients
+  delayNode.connect(bassAnalyser);
 
   // Init state
   prevSpec = new Float32Array(analyser.frequencyBinCount);

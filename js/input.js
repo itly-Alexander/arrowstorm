@@ -57,6 +57,22 @@ document.addEventListener('keydown', e => {
     e.preventDefault();
     hitNote(d);
   }
+
+  // Menu easter egg: player-controlled arrow
+  if (d !== undefined && !gActive && !settingsOpen && !rebindingTarget) {
+    const dirs = ['left', 'down', 'up', 'right'];
+    spawnPlayerArrow();
+    playerKeys[dirs[d]] = true;
+  }
+});
+
+document.addEventListener('keyup', e => {
+  // Menu easter egg: release direction
+  const d = KM[e.key];
+  if (d !== undefined && playerArrow) {
+    const dirs = ['left', 'down', 'up', 'right'];
+    playerKeys[dirs[d]] = false;
+  }
 });
 
 // Mouse input for strike mode
